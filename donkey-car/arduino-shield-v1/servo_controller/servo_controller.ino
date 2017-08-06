@@ -180,11 +180,11 @@ void loop()
             if((rc_throttle_servo_pulse_length < RC_THROTTLE_DEAD_ZONE_MIN)
             || (rc_throttle_servo_pulse_length > RC_THROTTLE_DEAD_ZONE_MAX))
             {
-                throttle_servo.writeMicroseconds(max(rc_throttle_servo_pulse_length, 1500)); // backwards is brake
+                throttle_servo.writeMicroseconds(serial_throttle_servo_pulse_length);
             }
             else
             {
-                throttle_servo.writeMicroseconds(serial_throttle_servo_pulse_length);
+                throttle_servo.writeMicroseconds(1500);    
             }
 
             if((rc_steering_servo_pulse_length < RC_STEERING_DEAD_ZONE_MIN)
@@ -199,7 +199,7 @@ void loop()
         }
         else
         {
-            throttle_servo.writeMicroseconds(max(rc_throttle_servo_pulse_length, 1500)); // backwards is brake
+            throttle_servo.writeMicroseconds(rc_throttle_servo_pulse_length);
             steering_servo.writeMicroseconds(rc_steering_servo_pulse_length);
         }
     }
