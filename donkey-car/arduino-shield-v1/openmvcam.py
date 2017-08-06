@@ -57,7 +57,6 @@ STEERING_SERVO_MAX_US = tmp
 
 t_average = []
 r_average = []
-
 def figure_out_my_steering(line, img):
     global t_average
     global r_average
