@@ -151,7 +151,7 @@ def set_servos(throttle, steering):
 #
 
 sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
+sensor.set_pixformat(sensor.RGB565 if COLOR_LINE_FOLLOWING else sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQQVGA)
 sensor.set_vflip(True)
 sensor.set_hmirror(True)
