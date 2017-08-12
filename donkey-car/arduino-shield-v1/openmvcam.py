@@ -6,30 +6,31 @@
 # Settings
 ###########
 
-COLOR_LINE_FOLLOWING = False # False to use grayscale thresholds, true to use color thresholds.
-COLOR_THRESHOLDS = [(0, 100, -128, 127, -128, 127)]
-GRAYSCALE_THRESHOLDS = [(240, 255)]
+COLOR_LINE_FOLLOWING = True # False to use grayscale thresholds, true to use color thresholds.
+COLOR_THRESHOLDS = [(20, 100, -20, 20, 20, 127)] # Yellow Line.
+GRAYSCALE_THRESHOLDS = [(240, 255)] # White Line.
 BINARY_VIEW = True # Helps debugging but costs FPS if on.
+DO_NOTHING = False # Just capture frames...
 
-MAG_THRESHOLD = 4 # Raise to filter out false detections.
+MAG_THRESHOLD = 5 # Raise to filter out false detections.
 THETA_AVERAGE_WINDOW_SIZE = 4 # Sliding window of averages of this size.
 RHO_AVERAGE_WINDOW_SIZE = 4 # Sliding window of averages of this size.
 
 # Tweak these values for your robocar.
 THROTTLE_CUT_OFF_ANGLE = 10.0 # Maximum angular distance from 90 before we cut speed [0.0-90.0).
 THROTTLE_CUT_OFF_RATE = 0.5 # How much to cut our speed boost (below) once the above is passed (0.0-1.0].
-THROTTLE_GAIN = 10.0 # e.g. how much to speed up on a straight away
-THROTTLE_OFFSET = 20.0 # e.g. default speed
+THROTTLE_GAIN = 2.0 # e.g. how much to speed up on a straight away
+THROTTLE_OFFSET = 23.0 # e.g. default speed
 THROTTLE_P_GAIN = 1.0
 THROTTLE_I_GAIN = 0.0
 THROTTLE_I_MIN = -0.0
 THROTTLE_I_MAX = 0.0
-THROTTLE_D_GAIN = 0.1
+THROTTLE_D_GAIN = 0.0
 
 # Tweak these values for your robocar.
-STEERING_THETA_GAIN = 40.0
+STEERING_THETA_GAIN = 30.0
 STEERING_RHO_GAIN = -1.0
-STEERING_P_GAIN = 0.75
+STEERING_P_GAIN = 0.4
 STEERING_I_GAIN = 0.0
 STEERING_I_MIN = -0.0
 STEERING_I_MAX = 0.0
@@ -40,8 +41,8 @@ THROTTLE_SERVO_MIN_US = 1500
 THROTTLE_SERVO_MAX_US = 2000
 
 # Tweak these values for your robocar.
-STEERING_SERVO_MIN_US = 1000
-STEERING_SERVO_MAX_US = 2000
+STEERING_SERVO_MIN_US = 700
+STEERING_SERVO_MAX_US = 2300
 
 ###########
 # Setup
@@ -105,7 +106,7 @@ def figure_out_my_steering(line, img):
         t_reflected = 180 - t
 
     else: # Quadrant 4 (270 to 359 degrees - 180 to 269 never happens)
-        t_reflected = t - 360
+        t_reflected = t
 
     # Step 3: We need two error function outputs to drive the robocar. One that tries to make the
     # slope of the line zero and another that tries to center the line in the middle of the field
@@ -118,7 +119,7 @@ def figure_out_my_steering(line, img):
     # Assuming the slope of the line is zero then cos(t) should be one. One multiplied by rho()
     # gives you the position of the line on the screen. We then subtract where the line should
     # be (the center) to get an error output.
-    r_result = (math.cos(math.radians(t)) * r) - (img.width() / 2)
+    r_result = math.cos(math.radians(t)) *  (r - (img.width() / 2))
 
     return (t_result * STEERING_THETA_GAIN) + (r_result * STEERING_RHO_GAIN)
 
@@ -152,10 +153,10 @@ def set_servos(throttle, steering):
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565 if COLOR_LINE_FOLLOWING else sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQQVGA)
+sensor.set_framesize(sensor.QQVGA)
 sensor.set_vflip(True)
 sensor.set_hmirror(True)
-sensor.skip_frames(time = 2000)
+sensor.skip_frames(time = 0)
 if COLOR_LINE_FOLLOWING: sensor.set_auto_gain(False)
 if COLOR_LINE_FOLLOWING: sensor.set_auto_whitebal(False)
 clock = time.clock()
@@ -176,16 +177,17 @@ steering_output = 90
 
 while True:
     clock.tick()
-    img = sensor.snapshot().histeq()
+    img = sensor.snapshot() if COLOR_LINE_FOLLOWING else sensor.snapshot().histeq()
     if BINARY_VIEW: img = img.binary(COLOR_THRESHOLDS if COLOR_LINE_FOLLOWING else GRAYSCALE_THRESHOLDS)
+    if DO_NOTHING: continue
 
-    line = img.get_regression([(255, 255)] if BINARY_VIEW else \
-           (COLOR_THRESHOLDS if COLOR_LINE_FOLLOWING else GRAYSCALE_THRESHOLDS), \
-           robust = True)
+    line = img.get_regression(([(20, 100, -128, 127, -128, 127)] if BINARY_VIEW else COLOR_THRESHOLDS) \
+           if COLOR_LINE_FOLLOWING else ([(255, 255)] if BINARY_VIEW else GRAYSCALE_THRESHOLDS), \
+           robust = True, roi = (0, sensor.height() // 4, sensor.width(), sensor.height()))
     print_string = ""
 
     if line and (line.magnitude() >= MAG_THRESHOLD):
-        img.draw_line(line.line(), color = 127)
+        img.draw_line(line.line(), color = (127, 127, 127) if COLOR_LINE_FOLLOWING else 127)
 
         new_time = pyb.millis()
         delta_time = new_time - old_time
