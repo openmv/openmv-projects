@@ -12,9 +12,17 @@ Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 1/16 2.4Ghz Exceed RC Magnet Car<br />![1/16 2.4Ghz Exceed RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Exceed RC Magnet Car") | http://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
 
-**Sub-Total $
+**Sub-Total $xx.xx**
 
-Optionally, for better performance I recommend that you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
+In addition to the above I **heavily** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum turn speed.
+
+Part Description | Part Link | Part Count | Part Cost
+---------------- | --------- | ---------- | ---------
+OpenMV Cam Wide Angle Lens<br />![OpenMV Cam Wide Angle Lens](images/parts/wide.jpg "OpenMV Cam Wide Angle Lens") | http://openmv.io/collections/products/products/ultra-wide-angle-lens | 1 | $15.00
+
+**Sub-Total $15.00**
+
+Moving on, for better performance I recommend that you purchase LiPo batteries, adapters, and a LiPo charger. The NiMh battery that comes with the Magnet Car will quickly run out of power while you're tunning your self-driving car making it hard to test and race.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
@@ -24,7 +32,7 @@ Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charg
 
 **Sub-Total $45.77**
 
-Finally, for wireless programming I also recommend that you purchase a WiFi shield for the OpenMV Cam.
+Finally, for wireless programming I recommend that you purchase a WiFi shield for the OpenMV Cam. With the WiFi shield you'll be able to comfortably test your self-driving car from one position versus following your car around tethered by a USB cable.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
