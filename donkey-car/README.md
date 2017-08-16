@@ -12,10 +12,15 @@ Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 1/16 2.4Ghz Excced RC Magnet Car<br />![1/16 2.4Ghz Excced RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Excced RC Magnet Car") | http://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
 
-Optionally, for better performance I reconmend you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
+Optionally, for better performance I reconmend that you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-Turnigy 1800mAh 2S 20C LiPo Pack<br />![Turnigy 1800mAh 2S 20C LiPo Pack](images/parts/lipo.jpg "Turnigy 1800mAh 2S 20C LiPo Pack") | https://hobbyking.com/en_us/turnigy-1800mah-2s-20c-lipo-pack.html | 3 | $8.94
+Turnigy 1300mAh 2S 20C LiPo Pack<br />![Turnigy 1300mAh 2S 20C LiPo Pack](images/parts/lipo.jpg "Turnigy 1300mAh 2S 20C LiPo Pack") | http://hobbyking.com/en_us/turnigy-1300mah-2s-20c-lipo-pack-suit-1-18th-truck.html | 3 | $10.03
 Tamiya Mini Female to XT60 Male Adapters<br />![Tamiya Mini Female to XT60 Male Adapters](images/parts/adapters.jpg "Tamiya Mini Female to XT60 Male Adapters") | http://hobbyking.com/en_us/female-mini-tamiya-gt-male-xt60-3pcs-bag.html | 1 | $3.36
+Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charger](images/parts/lipo-charger.jpg "Turnigy E3 Compact 2S/3S Lipo Charger") | http://hobbyking.com/en_us/turnigy-e3-compact-2s-3s-lipo-charger-100-240v-us-plug.html | 1 | $12.35
+
+**Total $45.77**
+
+
 
