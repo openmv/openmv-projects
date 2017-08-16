@@ -12,6 +12,8 @@ Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 1/16 2.4Ghz Excced RC Magnet Car<br />![1/16 2.4Ghz Excced RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Excced RC Magnet Car") | http://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
 
+**Sub-Total $
+
 Optionally, for better performance I reconmend that you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
 
 Part Description | Part Link | Part Count | Part Cost
@@ -20,7 +22,12 @@ Turnigy 1300mAh 2S 20C LiPo Pack<br />![Turnigy 1300mAh 2S 20C LiPo Pack](images
 Tamiya Mini Female to XT60 Male Adapters<br />![Tamiya Mini Female to XT60 Male Adapters](images/parts/adapters.jpg "Tamiya Mini Female to XT60 Male Adapters") | http://hobbyking.com/en_us/female-mini-tamiya-gt-male-xt60-3pcs-bag.html | 1 | $3.36
 Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charger](images/parts/lipo-charger.jpg "Turnigy E3 Compact 2S/3S Lipo Charger") | http://hobbyking.com/en_us/turnigy-e3-compact-2s-3s-lipo-charger-100-240v-us-plug.html | 1 | $12.35
 
-**Total $45.77**
+**Sub-Total $45.77**
 
+Finally, for wireless programming I also reconmend that you purcahse a WiFi shield for the OpenMV Cam.
 
+Part Description | Part Link | Part Count | Part Cost
+---------------- | --------- | ---------- | ---------
+OpenMV Cam WiFi Shield<br />![OpenMV Cam WiFi Shield](images/parts/wifi.jpg "OpenMV Cam WiFi Shield") | http://openmv.io/collections/products/products/wifi-shield | 1 | $35.00
 
+**Sub-Total $35.00**
