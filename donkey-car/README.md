@@ -10,4 +10,4 @@ The OpenMV Cam Donkey Car is designed to be easy to build out of parts that you 
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-![1/16 2.4Ghz Excced RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Excced RC Magnet Car") 1/16 2.4Ghz Excced RC Magnet Car | https://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
+![1/16 2.4Ghz Excced RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Excced RC Magnet Car")<br/>1/16 2.4Ghz Excced RC Magnet Car | https://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
