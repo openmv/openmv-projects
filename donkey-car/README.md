@@ -22,7 +22,7 @@ OpenMV Cam Wide Angle Lens<br />![OpenMV Cam Wide Angle Lens](images/parts/wide.
 
 **Sub-Total $15.00**
 
-Moving on, for better performance I recommend that you purchase LiPo batteries, adapters, and a LiPo charger. The NiMh battery that comes with the Magnet Car will quickly run out of power while you're tunning your self-driving car making it hard to test and race.
+Moving on, for better performance I recommend that you purchase LiPo batteries, adapters, and a LiPo charger. The NiMh battery that comes with the Magnet Car will quickly run out of power making it hard for you to test for hours before a raceon the same day.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
@@ -32,7 +32,7 @@ Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charg
 
 **Sub-Total $45.77**
 
-Finally, for wireless programming I recommend that you purchase a WiFi shield for the OpenMV Cam. With the WiFi shield you'll be able to comfortably test your self-driving car from one position versus following your car around tethered by a USB cable.
+Finally, for wireless programming I recommend that you purchase a WiFi shield for the OpenMV Cam. With the WiFi shield you'll be able to comfortably test your self-driving car from one position versus having to follow your car around tethered by a USB cable.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
