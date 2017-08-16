@@ -6,15 +6,15 @@ This instructable shows off how to create a [DYI Robocar](http://diyrobocars.com
 
 ## Parts
 
-The OpenMV Cam Donkey Car is designed to be easy to build out of parts that you can buy online and assemble togheter with basic tools. Below is the list of essential parts you'll need to build the self-driving car.
+The OpenMV Cam Donkey Car is designed to be easy to build out of parts that you can buy online and assemble together with basic tools. Below is the list of essential parts you'll need to build the self-driving car.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-1/16 2.4Ghz Excced RC Magnet Car<br />![1/16 2.4Ghz Excced RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Excced RC Magnet Car") | http://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
+1/16 2.4Ghz Exceed RC Magnet Car<br />![1/16 2.4Ghz Exceed RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Exceed RC Magnet Car") | http://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
 
 **Sub-Total $
 
-Optionally, for better performance I reconmend that you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
+Optionally, for better performance I recommend that you purchase the follow parts so you can use LiPo batteries with your self-driving car versus the NiMh battery the Magnet Car comes with which has a shorter run time.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
@@ -24,7 +24,7 @@ Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charg
 
 **Sub-Total $45.77**
 
-Finally, for wireless programming I also reconmend that you purcahse a WiFi shield for the OpenMV Cam.
+Finally, for wireless programming I also recommend that you purchase a WiFi shield for the OpenMV Cam.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
