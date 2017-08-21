@@ -27,7 +27,8 @@ While the above parts list is all you need you may wish to instead control your 
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-
+5V 16 MHz Arduino Pro Mini<br />![5V 16 MHz Arduino Pro Mini](images/parts/arduino.jpg "5V 16 MHz Arduino Pro Mini") | http://www.amazon.com/ATmega328P-Development-CH340G-Programmer-Arduino/dp/B073P7DGBX | 1 | $9.62
+8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | http://www.amazon.com/Angelelec-Open-Source-Stackable-Header/dp/B01F8AHG9O | 1 | $5.08
 
 **Sub-Total $xx.xx**
 
