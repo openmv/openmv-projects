@@ -15,8 +15,8 @@ Magenet Car Base Plate<br />![Magnet Car Base Plate](images/parts/base.jpg "Magn
 Magnet Car Roll Cage</br >![Magnet Car Roll Cage](images/parts/cage.jpg "Magnet Car Roll Cage") | http://www.shapeways.com/product/74VXFV7AT/magnet-car-roll-cage<br /><br />If you have a 3D printer you can print this part instead of buying it by downloading the STL file for the part which you can find at the above link. | 1 | $66.92
 OpenMV Cam Donkey Mount<br />![OpenMV Cam Donkey Mount](images/parts/camera-mount.jpg "OpenMV Cam Donkey Mount") | http://www.shapeways.com/product/G7YQBUMRC/openmv-cam-donkey-mount<br /><br />If you have a 3D printer you can print this part instead of buying it by downloading the STL file for the part which you can find at the above link. | 1 | $21.18
 30 CM Servo Lead Extension Assemblies<br />![30 CM Servo Lead Extension Assemblies](images/parts/extensions.jpg "30 CM Servo Lead Extension Assemblies") | http://hobbyking.com/en_us/30cm-servo-lead-extention-jr-with-hook-26awg-5pcs-bag-1.html | 1 | $1.39
-OpenMV Cam M7<br />![OpenMV Cam M7](images/parts/camera.jpg "OpenMV Cam M7") | http://openmv.io/products/openmv-cam-m7 | 1 | $65.00
-OpenMV Cam Servo Shield<br />![OpenMV Cam Servo Shield](images/parts/servos.jpg "OpenMV Cam Servo Shield") | http://openmv.io/products/servo-shield | 1 | $15.00
+OpenMV Cam M7<br />![OpenMV Cam M7](images/parts/camera.jpg "OpenMV Cam M7") | http://openmv.io/products/openmv-cam-m7<br /><br />Note: You will need a soldering iron and solder to solder the pin headers for this part on. | 1 | $65.00
+OpenMV Cam Servo Shield<br />![OpenMV Cam Servo Shield](images/parts/servos.jpg "OpenMV Cam Servo Shield") | http://openmv.io/products/servo-shield<br /><br />Note: You will need a soldering iron and solder to solder the pin headers for this part on. | 1 | $15.00
 
 **Sub-Total $xx.xx**
 
