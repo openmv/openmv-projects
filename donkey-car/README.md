@@ -28,6 +28,7 @@ While the above parts list is all you need you may wish to instead control your 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 
+
 **Sub-Total $xx.xx**
 
 In addition to all of the above I **heavily** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
