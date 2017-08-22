@@ -20,8 +20,10 @@ M3 Machine Screw Nuts<br />![M3 Machine Screw Nuts](images/parts/nuts.jpg "M3 Ma
 30 CM Servo Lead Extension Assemblies<br />![30 CM Servo Lead Extension Assemblies](images/parts/extensions.jpg "30 CM Servo Lead Extension Assemblies") | http://hobbyking.com/en_us/30cm-servo-lead-extention-jr-with-hook-26awg-5pcs-bag-1.html | 1 | $1.39
 OpenMV Cam M7<br />![OpenMV Cam M7](images/parts/camera.jpg "OpenMV Cam M7") | http://openmv.io/products/openmv-cam-m7<br /><br />Note: You will need a soldering iron and solder to attach the pin headers for this part. | 1 | $65.00
 OpenMV Cam Servo Shield<br />![OpenMV Cam Servo Shield](images/parts/servos.jpg "OpenMV Cam Servo Shield") | http://openmv.io/products/servo-shield<br /><br />Note: You will need a soldering iron and solder to attach the pin headers for this part. | 1 | $15.00
+Zip Ties<br />![Zip Ties](images/parts/ties.jpg "Zip Ties") | http://www.amazon.com/Cable-Zip-Ties-Fastening-Organization/dp/B01LPOB2JW | 1 | $9.99
+Micro USB Cable<br />![Micro USB Cable](images/parts/uusb.jpg "Micro USB Cable") | http://www.amazon.com/AmazonBasics-USB-Male-Micro-Cable/dp/B01EK87T9M | 1 | $5.99
 
-**Sub-Total $323.92** - However, if you can 3D print parts it's significantly cheaper to build the robocar.
+**Sub-Total $339.90** - However, if you can 3D print parts it's significantly cheaper to build the robocar. You may also have some of the above parts lying around (like the Micro USB cable).
 
 While the above parts list is all you need you may wish to instead control your robocar's servos using the below parts for an arduino based servo controller board which will allow you to control your robot remotely using the RC transmitter that comes with the magnet car. You don't need the servo shield above if you build your car using the below components.
 
