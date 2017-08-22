@@ -33,8 +33,9 @@ Part Description | Part Link | Part Count | Part Cost
 Arduino Pro Mini Programmer<br />![Arduino Pro Mini Programmer](images/parts/programmer.jpg "Arduino Pro Mini Programmer") | http://www.amazon.com/Micro-Basic-Breakout-Module-Arduino/dp/B00N4MCS1A | 1 | $9.95
 8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | http://www.amazon.com/Angelelec-Open-Source-Stackable-Header/dp/B01F8AHG9O | 1 | $5.08
 RC Receiver Servo Adapters<br />![RC Receiver Servo Adapters](images/parts/shorts.jpg "RC Receiver Servo Adapters") | https://www.amazon.com/Hobbypower-Futaba-Servo-Extension-Cable/dp/B00RVDVWTC | 1 | $4.49
+Mini USB Cable<br />![Mini USB Cable](images/parts/musb.jpg "Mini USB Cable") | http://www.amazon.com/AmazonBasics-USB-2-0-Cable-Male/dp/B00NH11N5A | 1 | $5.49
 
-**Sub-Total $xx.xx**
+**Sub-Total $xx.xx** - You may have some of the above parts lying around (like the Mini USB cable).
 
 In addition to all of the above I **heavily** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
 
