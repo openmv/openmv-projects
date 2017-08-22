@@ -38,7 +38,7 @@ In addition to all of the above I **heavily** recommend that your purchase a wid
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-OpenMV Cam Wide Angle Lens<br />![OpenMV Cam Wide Angle Lens](images/parts/wide.jpg "OpenMV Cam Wide Angle Lens") | http://openmv.io/collections/products/products/ultra-wide-angle-lens | 1 | $15.00
+OpenMV Cam Wide Angle Lens<br />![OpenMV Cam Wide Angle Lens](images/parts/wide.jpg "OpenMV Cam Wide Angle Lens") | http://openmv.io/products/ultra-wide-angle-lens | 1 | $15.00
 
 **Sub-Total $15.00**
 
