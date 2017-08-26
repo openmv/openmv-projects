@@ -85,4 +85,22 @@ Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using fo
 
 Finally, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. Mount the base plate onto the four stands exposed after you removed the plastic hood from your RC car. The base plate should snuggly sit on the four mounting posts. If you to make sure the base plate is mounted more securely you can file down the slots on the base plate more until you can insert the four metal pins back into their holes the mounting posts.
 
+### Step 3 - Assemble the head:
+
+Now we're going to attach the OpenMV Cam to the body. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC. Then reattach the lens mount. Next, we need to solder the pin headers onto the OpenMV Cam that it comes with. Using a soldering iron attach the two 8-pin headers on each side of the camera so that the 8-pin header legs are sticking out the back of the OpenMV Cam. Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
+
+Next, let's build up the servo shield for your OpenMV Cam so that it can control the RC car. You need to solder on the two 8-pin headers on either side of the servo controller board with the pin legs facing down. Then, solder on the two servo connection headers. The plastic parts on each header should be vertical and not flat against the servo controller board.
+
+If you bought a WiFi shield let's build that up too. Solder the two 8-pin headers it came with on either side of it with the legs facing down.
+
+Finally, let's stack everything up. You can mount shields on the OpenMV Cam from either the top or bottom of the board. Let's put the WiFi shield on the top of the OpenMV Cam and the servo shield on the bottom. However, let's use some of those extra 8-pin headers we have to space out the servo shield from the OpenMV Cam so we have more space to mount it to the body. So, insert an extra 8-pin header on each side of the OpenMV Cam between the OpenMV Cam and the servo shield connection.
+
+### Step 4 - Putting it together:
+
+Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam mount on the top of the robot body. To give yourself more freedom mount the OpenMV Cam upside down. You'll be able to rotate the OpenMV Cam's field of view in software.
+
+Next, using the servo extension header attach channels 0 and 1 from the servo shield to the throttle and steering servo wires respectively. Make sure to thread the servo extension wires through the hole in the base plate.
+
+
+
 
