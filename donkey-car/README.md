@@ -32,12 +32,12 @@ Part Description | Part Link | Part Count | Part Cost
 5V 16 MHz Arduino Pro Mini<br />![5V 16 MHz Arduino Pro Mini](images/parts/arduino.jpg "5V 16 MHz Arduino Pro Mini") | https://www.amazon.com/Arducam-Atmega328-Development-Compatible-Arduino/dp/B01981EBBA | 1 | $6.49
 Arduino Pro Mini Programmer<br />![Arduino Pro Mini Programmer](images/parts/programmer.jpg "Arduino Pro Mini Programmer") | https://www.amazon.com/Micro-Basic-Breakout-Module-Arduino/dp/B00N4MCS1A | 1 | $9.95
 Servo Controller Board<br />![Servo Controller Board](images/parts/controller.jpg "Servo Controller Board") | https://oshpark.com/shared_projects/2bKUWmbq<br /><br />You can download the Gerber files for this part at https://644db4de3505c40a0444-327723bce298e3ff5813fb42baeefbaa.ssl.cf1.rackcdn.com/ab7a7db45c3c6b37bcca1d8fc84e26e4.zip<br /><br />*Servo Controller Board by Chris Anderson*. | 1 | $10.50 
-Male Headers<br />![Male Headers](images/parts/male.jpg "Male Headers") | https://www.amazon.com/SamIdea-15-Pack-Straight-Connector-Prototype/dp/B01M9FCAXW | 1 | $5.69
-8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | https://www.amazon.com/Venel-Electronic-Component-Stackable-Shields/dp/B071454KP1 | 1 | $5.08
+Male Headers<br />![Male Headers](images/parts/male.jpg "Male Headers") | https://www.amazon.com/SamIdea-15-Pack-Straight-Connector-Prototype/dp/B01M9FCAXW<br /><br />Note: You will need a soldering iron and solder to attach these pin headers to the above PCB. | 1 | $5.69
+8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | https://www.amazon.com/Venel-Electronic-Component-Stackable-Shields/dp/B071454KP1<br /><br />Note: You will need a soldering iron and solder to attach these pin headers to the above PCB. | 1 | $5.08
 RC Receiver Servo Adapters<br />![RC Receiver Servo Adapters](images/parts/shorts.jpg "RC Receiver Servo Adapters") | https://www.amazon.com/Hobbypower-Futaba-Servo-Extension-Cable/dp/B00RVDVWTC | 1 | $4.49
 Mini USB Cable<br />![Mini USB Cable](images/parts/musb.jpg "Mini USB Cable") | https://www.amazon.com/AmazonBasics-USB-2-0-Cable-Male/dp/B00NH11N5A | 1 | $5.49
 
-**Sub-Total $xx.xx** - You may have some of the above parts lying around (like the Mini USB cable).
+**Sub-Total $47.69** - You may have some of the above parts lying around (like the Mini USB cable).
 
 In addition to all of the above I **heavily** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
 
