@@ -105,7 +105,7 @@ Now, let's tiddy everything up. Use the zip ties to tie down all your wires so t
 
 Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter.
 
-### Optional Step 1 Building the Arduino based Servo Controller:
+### Optional Step - Building the Arduino based Servo Controller:
 
 If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a good idea) here's how to build it.
 
