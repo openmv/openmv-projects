@@ -97,10 +97,14 @@ Finally, let's stack everything up. You can mount shields on the OpenMV Cam from
 
 ### Step 4 - Putting it together:
 
-Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam mount on the top of the robot body. To give yourself more freedom mount the OpenMV Cam upside down. You'll be able to rotate the OpenMV Cam's field of view in software.
+Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam mount on the top of the robocar body. To give yourself more freedom mount the OpenMV Cam upside down. You'll be able to rotate the OpenMV Cam's field of view in software.
 
 Next, using the servo extension header attach channels 0 and 1 from the servo shield to the throttle and steering servo wires respectively. Make sure to thread the servo extension wires through the hole in the base plate.
 
+Now, let's tiddy everything up. Use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires.
 
+Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter.
+
+### Optional Step 1 Building the Arduino Based Servo Controller
 
 
