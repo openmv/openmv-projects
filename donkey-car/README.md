@@ -105,7 +105,13 @@ Now, let's tiddy everything up. Use the zip ties to tie down all your wires so t
 
 Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter.
 
-### Optional Step - Building the Arduino based Servo Controller:
+### Step 5 - Installing the software:
+
+Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop. Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out of date. Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/main.py) and open the script in OpenMV IDE. How the script works is documented in the comments.
+
+Finally, the run the script click the run button on OpenMV IDE in the lower left-hand corner and your robocar should come to life! Once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button.
+
+### Optional Step 1 - Building the Arduino based Servo Controller:
 
 If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a good idea) here's how to build it.
 
