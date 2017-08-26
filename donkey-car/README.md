@@ -105,6 +105,14 @@ Now, let's tiddy everything up. Use the zip ties to tie down all your wires so t
 
 Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter.
 
-### Optional Step 1 Building the Arduino Based Servo Controller
+### Optional Step 1 Building the Arduino based Servo Controller:
+
+If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a good idea) here's how to build it.
+
+First, solder two 8-pin female headers onto either side of the servo controller board. Note that since we want this servo controller to mount onto the back of the OpenMV Cam we're going to do this in reverse. The female side of these headers should be on the side of the PCB that says ``123D Circuits``. Next, on the Arduino Pro Mini solder male pin headers facing down on either side of it. As for the row of pin headers that go across it on it's back solder male pin headers there facing up. Finally, solder the Arduino Pro Mini to the servo controller board such that the button on it is over the row of holes going across the bottom of the servo controller board.
+
+Now, install male pin headers facing up on the servo controller board in all the available remaining holes not covered by the Arduino Pro Mini. The only holes that should have anything in them are the eight holes going across the bottom of the servo controller board under the Arduino Pro Mini.
+
+Finally mount the Arduino based Servo Controller board to the back of your OpenMV Cam. You'll want to use two of the extra 8-pin female headers to act as spacers between the OpenMV Cam and the servo controller board. Note that the servo controller board should mount such that it's not sticking out of the OpenMV Cam's form factor.
 
 
