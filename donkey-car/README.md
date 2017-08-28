@@ -17,7 +17,7 @@ OpenMV Cam Donkey Mount<br />![OpenMV Cam Donkey Mount](images/parts/camera-moun
 M2 Machine Screw Set<br />![M2 Machine Screw Set](images/parts/screws.jpg "M2 Machine Screw Set") | https://www.amazon.com/Glarks-280-Pieces-Phillips-Stainless-Assortment/dp/B01G0KRGXC | 1 | $11.89
 M3 35mm Machine Screws<br />![M3 35mm Machine Screws](images/parts/long.jpg "M3 35mm Machine Screws") | https://www.amazon.com/M3-3mm-0-50-Stainless-MonsterBolts/dp/B016YZTEB0 | 1 | $4.00
 M3 Machine Screw Nuts<br />![M3 Machine Screw Nuts](images/parts/nuts.jpg "M3 Machine Screw Nuts") | https://www.amazon.com/M3-0-5-3mm-Metric-Stainless-MonsterBolts/dp/B01528BPIU | 1 | $3.49
-30 CM Servo Lead Extension Assemblies<br />![30 CM Servo Lead Extension Assemblies](images/parts/extensions.jpg "30 CM Servo Lead Extension Assemblies") | https://hobbyking.com/en_us/30cm-servo-lead-extention-jr-with-hook-26awg-5pcs-bag-1.html | 1 | $1.39
+30 CM Servo Lead Extension Assemblies<br />![30 CM Servo Lead Extension Assemblies](images/parts/extensions.jpg "30 CM Servo Lead Extension Assemblies") | http://hobbyking.com/en_us/30cm-servo-lead-extention-jr-with-hook-26awg-5pcs-bag-1.html | 1 | $1.39
 OpenMV Cam M7<br />![OpenMV Cam M7](images/parts/camera.jpg "OpenMV Cam M7") | https://openmv.io/products/openmv-cam-m7<br /><br />Note: You will need a soldering iron and solder to attach the pin headers for this part. | 1 | $65.00
 OpenMV Cam Servo Shield<br />![OpenMV Cam Servo Shield](images/parts/servos.jpg "OpenMV Cam Servo Shield") | https://openmv.io/products/servo-shield<br /><br />Note: You will need a soldering iron and solder to attach the pin headers for this part. | 1 | $15.00
 Zip Ties<br />![Zip Ties](images/parts/ties.jpg "Zip Ties") | https://www.amazon.com/Cable-Zip-Ties-Fastening-Organization/dp/B01LPOB2JW | 1 | $9.99
@@ -51,9 +51,9 @@ Moving on, for better performance I recommend that you purchase LiPo batteries, 
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
-Turnigy 1300mAh 2S 20C LiPo Pack<br />![Turnigy 1300mAh 2S 20C LiPo Pack](images/parts/lipo.jpg "Turnigy 1300mAh 2S 20C LiPo Pack") | https://hobbyking.com/en_us/turnigy-1300mah-2s-20c-lipo-pack-suit-1-18th-truck.html | 3 | $10.03
-Tamiya Mini Female to XT60 Male Adapters<br />![Tamiya Mini Female to XT60 Male Adapters](images/parts/adapters.jpg "Tamiya Mini Female to XT60 Male Adapters") | https://hobbyking.com/en_us/female-mini-tamiya-gt-male-xt60-3pcs-bag.html | 1 | $3.36
-Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charger](images/parts/lipo-charger.jpg "Turnigy E3 Compact 2S/3S Lipo Charger") | https://hobbyking.com/en_us/turnigy-e3-compact-2s-3s-lipo-charger-100-240v-us-plug.html | 1 | $12.35
+Turnigy 1300mAh 2S 20C LiPo Pack<br />![Turnigy 1300mAh 2S 20C LiPo Pack](images/parts/lipo.jpg "Turnigy 1300mAh 2S 20C LiPo Pack") | http://hobbyking.com/en_us/turnigy-1300mah-2s-20c-lipo-pack-suit-1-18th-truck.html | 3 | $10.03
+Tamiya Mini Female to XT60 Male Adapters<br />![Tamiya Mini Female to XT60 Male Adapters](images/parts/adapters.jpg "Tamiya Mini Female to XT60 Male Adapters") | http://hobbyking.com/en_us/female-mini-tamiya-gt-male-xt60-3pcs-bag.html | 1 | $3.36
+Turnigy E3 Compact 2S/3S Lipo Charger<br />![Turnigy E3 Compact 2S/3S Lipo Charger](images/parts/lipo-charger.jpg "Turnigy E3 Compact 2S/3S Lipo Charger") | http://hobbyking.com/en_us/turnigy-e3-compact-2s-3s-lipo-charger-100-240v-us-plug.html | 1 | $12.35
 
 **Sub-Total $45.77**
 
