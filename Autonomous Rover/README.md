@@ -1,3 +1,4 @@
+
 # Teensy 3.5/OpenMV Rover
 This project was based off a couple of other rover's that I built using multi-sonar sensors for obstacle detection and avoidance.  Needless to say they eye sores with everything hanging off the platform.  For many years wanted to do something with machine vision but most of the papers and projects used stereo vision vs monocular vision.  This also required you to send back to the PC the image to process and then send the commands back.  I wanted to keep the whole system closed on the rover platform with the need for any desktop software.  That’s where the OpenMV camera came into play.  Forgot how I found out about it but when I saw it I knew I was going to start another project.
 
@@ -26,11 +27,19 @@ I designed custom break out board for the T3.5 so it would fit on a Arduino Mega
 
 If the camera can not see an edge, can happen if it gets too close to walls the obstacle avoidance algorith Tuses a modified vfh/bubble alogithm is the camera can not detect edge which relies on the VL53 sensor to get distances.
 
+
+To see it in action check the video out, https://photos.app.goo.gl/JIc3378SOzJR2bSn1.  Discussion of the process and challenges can be seen in the OpenMV forum.
+
+
 Source Code and this readme is found on the TeensyOpenMV github page: https://github.com/mjs513/TeensyOpenMV
 
 Here are a couple of screen shots of the rover:
+1. http://forums.openmv.io/viewtopic.php?f=5&t=276
+2. http://forums.openmv.io/viewtopic.php?f=6&t=393
 
 ![Front View](https://github.com/mjs513/TeensyOpenMV/blob/master/images/Rover2.png)
 
 ![Side View](https://github.com/mjs513/TeensyOpenMV/blob/master/images/Rover1.png)
+
+
 
