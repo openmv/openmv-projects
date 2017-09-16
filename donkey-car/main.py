@@ -7,7 +7,7 @@
 ###########
 
 COLOR_LINE_FOLLOWING = True # False to use grayscale thresholds, true to use color thresholds.
-COLOR_THRESHOLDS = [(20, 100, -20, 20, 20, 127)] # Yellow Line.
+COLOR_THRESHOLDS = [(90, 100, -20, 127, 40, 127)] # Yellow Line.
 GRAYSCALE_THRESHOLDS = [(240, 255)] # White Line.
 BINARY_VIEW = True # Helps debugging but costs FPS if on.
 DO_NOTHING = False # Just capture frames...
@@ -19,8 +19,8 @@ RHO_AVERAGE_WINDOW_SIZE = 4 # Sliding window of averages of this size.
 # Tweak these values for your robocar.
 THROTTLE_CUT_OFF_ANGLE = 10.0 # Maximum angular distance from 90 before we cut speed [0.0-90.0).
 THROTTLE_CUT_OFF_RATE = 0.5 # How much to cut our speed boost (below) once the above is passed (0.0-1.0].
-THROTTLE_GAIN = 2.0 # e.g. how much to speed up on a straight away
-THROTTLE_OFFSET = 23.0 # e.g. default speed
+THROTTLE_GAIN = 3.0 # e.g. how much to speed up on a straight away
+THROTTLE_OFFSET = 25.0 # e.g. default speed
 THROTTLE_P_GAIN = 1.0
 THROTTLE_I_GAIN = 0.0
 THROTTLE_I_MIN = -0.0
@@ -28,11 +28,13 @@ THROTTLE_I_MAX = 0.0
 THROTTLE_D_GAIN = 0.0
 
 # Tweak these values for your robocar.
-STEERING_BOOST_ANGLE = 30.0 # Once we need to turn more than this then boost our turn output [0.0-90.0).
-STEERING_BOOST_RATE = 0.5 # How much to boost our turn by (percentage) (0.0-1.0] for 100% to 200%.
-STEERING_THETA_GAIN = 30.0
+STEERING_BOOST_ENABLE = True # Enable the steering boost.s
+STEERING_BOOST_GAIN = 25.0 # How much to add into steering when boosting.
+STEERING_BOOST_ANGLE = 50.0 # Once we need to turn more than this then boost our turn output [0.0-90.0).
+STEERING_BOOST_RATE = 0.15 # How much to boost our turn by (percentage) (0.0-1.0].
+STEERING_THETA_GAIN = 15.0
 STEERING_RHO_GAIN = -1.0
-STEERING_P_GAIN = 0.4
+STEERING_P_GAIN = 0.6
 STEERING_I_GAIN = 0.0
 STEERING_I_MIN = -0.0
 STEERING_I_MAX = 0.0
@@ -81,15 +83,8 @@ def figure_out_my_steering(line, img):
     global t_average
     global r_average
 
-    # Sliding window average. Way easier to do in python versus C.
-    t_average.append(line.theta())
-    if len(t_average) > THETA_AVERAGE_WINDOW_SIZE: t_average.pop(0)
-    t = sum(t_average) / len(t_average)
-
-    # Sliding window average. Way easier to do in python versus C.
-    r_average.append(line.rho())
-    if len(r_average) > RHO_AVERAGE_WINDOW_SIZE: r_average.pop(0)
-    r = sum(r_average) / len(r_average)
+    t = line.theta()
+    r = line.rho()
 
     # Step 1: Undo negative rho: [theta + 0, -rho] == [theta + 180, +rho]
 
@@ -103,6 +98,7 @@ def figure_out_my_steering(line, img):
 
     if t < 45: # Quadrant 1 (The first 90 degrees are split into two 45 degree quadrants)
         t_reflected = 180 - t
+        #if(t < 10): t_reflected = 180
 
     elif t < 90: # Quadrant 2 (The first 90 degrees are split into two 45 degree quadrants)
         t_reflected = t - 180
@@ -111,7 +107,8 @@ def figure_out_my_steering(line, img):
         t_reflected = 180 - t
 
     else: # Quadrant 4 (270 to 359 degrees - 180 to 269 never happens)
-        t_reflected = t
+        t_reflected = t - 45
+        #if(t > 350): t_reflected = 180
 
     # Step 3: We need two error function outputs to drive the robocar. One that tries to make the
     # slope of the line zero and another that tries to center the line in the middle of the field
@@ -126,6 +123,16 @@ def figure_out_my_steering(line, img):
     # be (the center) to get an error output.
     r_result = math.cos(math.radians(t)) *  (r - (img.width() / 2))
 
+    # Sliding window average. Way easier to do in python versus C.
+    t_average.append(t_result)
+    if len(t_average) > THETA_AVERAGE_WINDOW_SIZE: t_average.pop(0)
+    t = sum(t_average) / len(t_average)
+
+    # Sliding window average. Way easier to do in python versus C.
+    r_average.append(r_result)
+    if len(r_average) > RHO_AVERAGE_WINDOW_SIZE: r_average.pop(0)
+    r = sum(r_average) / len(r_average)
+
     return (t_result * STEERING_THETA_GAIN) + (r_result * STEERING_RHO_GAIN)
 
 # Solve: STEERING_BOOST_RATE = pow(sin(90 +/- STEERING_BOOST_ANGLE), x) for x...
@@ -134,10 +141,11 @@ s_power = math.log(STEERING_BOOST_RATE) / math.log(math.cos(math.radians(STEERIN
 
 def figure_out_my_steering_boost(steering): # steering -> [0:180]
 
-    # 2 - pow(sin()) of the steering angle is only one when driving straight... e.g. steering ~= 0
-    s_result = 2 - math.pow(math.sin(math.radians(max(min(steering, 179.99), 0.0))), s_power)
+    # 1 - pow(sin()) of the steering angle is only zero when driving straight... e.g. steering ~= 90
+    s_result = 1 - math.pow(math.sin(math.radians(max(min(steering, 179.99), 0.0))), s_power)
 
-    return s_result * steering # This increases steering by up to 2x...
+    if steering < 90: return steering - (s_result * STEERING_BOOST_GAIN)
+    else: return steering + (s_result * STEERING_BOOST_GAIN)
 
 # Solve: THROTTLE_CUT_OFF_RATE = pow(sin(90 +/- THROTTLE_CUT_OFF_ANGLE), x) for x...
 #        -> sin(90 +/- THROTTLE_CUT_OFF_ANGLE) = cos(THROTTLE_CUT_OFF_ANGLE)
@@ -169,7 +177,7 @@ def set_servos(throttle, steering):
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565 if COLOR_LINE_FOLLOWING else sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_framesize(sensor.QQQVGA)
 sensor.set_vflip(True)
 sensor.set_hmirror(True)
 sensor.skip_frames(time = 0)
@@ -193,8 +201,10 @@ steering_output = 90
 
 while True:
     clock.tick()
-    img = sensor.snapshot() if COLOR_LINE_FOLLOWING else sensor.snapshot().histeq()
+    img = sensor.snapshot().histeq() if COLOR_LINE_FOLLOWING else sensor.snapshot().histeq()
     if BINARY_VIEW: img = img.binary(COLOR_THRESHOLDS if COLOR_LINE_FOLLOWING else GRAYSCALE_THRESHOLDS)
+    if BINARY_VIEW: img.erode(1, threshold=2)
+    # if BINARY_VIEW: img.dilate(1, threshold=5)
     if DO_NOTHING: continue
 
     # We call get regression below to get a robust linear regression of the field of view. This returns
@@ -229,8 +239,8 @@ while True:
 
         # Steering goes from [-90,90] but we need to output [0,180] for the servos.
         steering_output = 90 + max(min(round(steering_pid_output), 90), -90)
-        steering_output = figure_out_my_steering_boost(steering_output)
-        steering_output = max(min(round(steering_output), 180), 0)
+        if STEERING_BOOST_ENABLE: steering_output = figure_out_my_steering_boost(steering_output)
+        if STEERING_BOOST_ENABLE: steering_output = max(min(round(steering_output), 180), 0)
 
         #
         # Figure out throttle and do throttle PID
