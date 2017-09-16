@@ -28,6 +28,8 @@ THROTTLE_I_MAX = 0.0
 THROTTLE_D_GAIN = 0.0
 
 # Tweak these values for your robocar.
+STEERING_BOOST_ANGLE = 30.0 # Once we need to turn more than this then boost our turn output [0.0-90.0).
+STEERING_BOOST_RATE = 0.5 # How much to boost our turn by (percentage) (0.0-1.0] for 100% to 200%.
 STEERING_THETA_GAIN = 30.0
 STEERING_RHO_GAIN = -1.0
 STEERING_P_GAIN = 0.4
@@ -55,6 +57,9 @@ RHO_AVERAGE_WINDOW_SIZE = max(RHO_AVERAGE_WINDOW_SIZE, 1)
 
 THROTTLE_CUT_OFF_ANGLE = max(min(THROTTLE_CUT_OFF_ANGLE, 89.99), 0)
 THROTTLE_CUT_OFF_RATE = max(min(THROTTLE_CUT_OFF_RATE, 1.0), 0.01)
+
+STEERING_BOOST_ANGLE = max(min(STEERING_BOOST_ANGLE, 89.99), 0)
+STEERING_BOOST_RATE = max(min(STEERING_BOOST_RATE, 1.0), 0.01)
 
 # Handle if these were reversed...
 tmp = max(THROTTLE_SERVO_MIN_US, THROTTLE_SERVO_MAX_US)
@@ -123,14 +128,25 @@ def figure_out_my_steering(line, img):
 
     return (t_result * STEERING_THETA_GAIN) + (r_result * STEERING_RHO_GAIN)
 
+# Solve: STEERING_BOOST_RATE = pow(sin(90 +/- STEERING_BOOST_ANGLE), x) for x...
+#        -> sin(90 +/- STEERING_BOOST_ANGLE) = cos(STEERING_BOOST_ANGLE)
+s_power = math.log(STEERING_BOOST_RATE) / math.log(math.cos(math.radians(STEERING_BOOST_ANGLE)))
+
+def figure_out_my_steering_boost(steering): # steering -> [0:180]
+
+    # 2 - pow(sin()) of the steering angle is only one when driving straight... e.g. steering ~= 0
+    s_result = 2 - math.pow(math.sin(math.radians(max(min(steering, 179.99), 0.0))), s_power)
+
+    return s_result * steering # This increases steering by up to 2x...
+
 # Solve: THROTTLE_CUT_OFF_RATE = pow(sin(90 +/- THROTTLE_CUT_OFF_ANGLE), x) for x...
 #        -> sin(90 +/- THROTTLE_CUT_OFF_ANGLE) = cos(THROTTLE_CUT_OFF_ANGLE)
-power = math.log(THROTTLE_CUT_OFF_RATE) / math.log(math.cos(math.radians(THROTTLE_CUT_OFF_ANGLE)))
+t_power = math.log(THROTTLE_CUT_OFF_RATE) / math.log(math.cos(math.radians(THROTTLE_CUT_OFF_ANGLE)))
 
-def figure_out_my_throttle(steering):
+def figure_out_my_throttle(steering): # steering -> [0:180]
 
-    # pow(sin()) of the steering angle is only non-zero when driving straight...
-    t_result = math.pow(math.sin(math.radians(min(steering, 179.99))), power)
+    # pow(sin()) of the steering angle is only non-zero when driving straight... e.g. steering ~= 90
+    t_result = math.pow(math.sin(math.radians(max(min(steering, 179.99), 0.0))), t_power)
 
     return (t_result * THROTTLE_GAIN) + THROTTLE_OFFSET
 
@@ -181,8 +197,11 @@ while True:
     if BINARY_VIEW: img = img.binary(COLOR_THRESHOLDS if COLOR_LINE_FOLLOWING else GRAYSCALE_THRESHOLDS)
     if DO_NOTHING: continue
 
-    line = img.get_regression(([(20, 100, -128, 127, -128, 127)] if BINARY_VIEW else COLOR_THRESHOLDS) \
-           if COLOR_LINE_FOLLOWING else ([(255, 255)] if BINARY_VIEW else GRAYSCALE_THRESHOLDS), \
+    # We call get regression below to get a robust linear regression of the field of view. This returns
+    # a line object which we can use to steer. Note that the ROI is set to the bottom 3/4ths of the
+    # screen because the top quater of the image is most likely not part of the road.
+    line = img.get_regression(([(50, 100, -128, 127, -128, 127)] if BINARY_VIEW else COLOR_THRESHOLDS) \
+           if COLOR_LINE_FOLLOWING else ([(127, 255)] if BINARY_VIEW else GRAYSCALE_THRESHOLDS), \
            robust = True, roi = (0, sensor.height() // 4, sensor.width(), sensor.height()))
     print_string = ""
 
@@ -210,6 +229,8 @@ while True:
 
         # Steering goes from [-90,90] but we need to output [0,180] for the servos.
         steering_output = 90 + max(min(round(steering_pid_output), 90), -90)
+        steering_output = figure_out_my_steering_boost(steering_output)
+        steering_output = max(min(round(steering_output), 180), 0)
 
         #
         # Figure out throttle and do throttle PID
@@ -231,6 +252,7 @@ while True:
 
         print_string = "Line Ok - throttle %d, steering %d - line t: %d, r: %d" % \
             (throttle_output , steering_output, line.theta(), line.rho())
+
     else:
         print_string = "Line Lost - throttle %d, steering %d" % \
             (throttle_output , steering_output)
