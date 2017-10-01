@@ -69,13 +69,13 @@ OpenMV Cam WiFi Shield<br />![OpenMV Cam WiFi Shield](images/parts/wifi.jpg "Ope
 
 ## Assembly
 
-Once you've purchased and recieved all the parts you want for your dyi robocar above you can now build it. Note that you're going to need an exacto knife, a file, a philips screw driver, pliers, a soldering iron, and some solder.
+Once you've purchased and recieved all the parts you want for your DIY Robocar above you can now build it. Note that you're going to need an exacto knife, a philips screw driver, pliers, a soldering iron, and some solder.
 
 ### Step 1 - Clean up parts:
 
 Your 3D printed parts are most-likely going to need some cleanup. Using the extaco knife remove any burs on the 3D printed parts and cleanout any excess material in any of the holes in the 3D printed parts. In particular, you're going to want to make sure to clear out material left over in the slots on the sides of the roll bar.
 
-Next, try to insert the 3D printed OpenMV Cam mount neck part into it's holder. Most-likely it's not going to be a perfect fit. So, use the file to sand the edges of the 3D printed material until the neck part fits into it's holder snuggly.
+Next, try to insert the 3D printed OpenMV Cam mount neck part into it's holder. The parts are designed to fit snuggly so this takes a bit of work. If you're having trouble try widening the neck holder with a file.
 
 ### Step 2 - Assemble the body:
 
