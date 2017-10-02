@@ -103,9 +103,9 @@ Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam moun
 
 Next, using the servo extension header attach channels 0 and 1 from the servo shield to the throttle and steering servo wires respectively. Make sure to thread the servo extension wires through the hole in the base plate.
 
-Now, let's tiddy everything up. Use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires.
+Now, let's tiddy everything up. Use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires. Also, put the black tube that comes with your RC Car over the antenna to protect the atenna.
 
-Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MVOE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
+Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
 
 ### Step 5 - Installing the software:
 
@@ -115,7 +115,7 @@ Finally, the run the script click the run button on OpenMV IDE in the lower left
 
 ### Optional Step 1 - Building the Arduino based Servo Controller:
 
-If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a good idea) here's how to build it.
+If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a **VERY** good idea) here's how to build it.
 
 First, solder two 8-pin female headers onto either side of the servo controller board. Note that since we want this servo controller to mount onto the back of the OpenMV Cam we're going to do this in reverse. The female side of these headers should be on the side of the PCB that says ``123D Circuits``. Next, on the Arduino Pro Mini solder male pin headers facing down on either side of it. As for the row of pin headers that go across it on it's back solder male pin headers there facing up. Finally, solder the Arduino Pro Mini to the servo controller board such that the button on it is over the row of holes going across the bottom of the servo controller board.
 
