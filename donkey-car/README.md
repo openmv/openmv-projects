@@ -89,7 +89,7 @@ Next, you need to make sure the base is firmly attached to the RC Car. First, be
 
 ### Step 3 - Assemble the head:
 
-Now we're going to attach the OpenMV Cam to the body. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC. Then reattach the lens mount. Next, we need to solder the pin headers onto the OpenMV Cam that it comes with. Using a soldering iron attach the two 8-pin headers on each side of the camera so that the 8-pin header legs are sticking out the back of the OpenMV Cam. Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
+Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC. Then reattach the lens mount. Next, we need to solder the pin headers onto the OpenMV Cam that it comes with. Using a soldering iron attach the two 8-pin headers on each side of the camera so that the 8-pin header legs are sticking out the back of the OpenMV Cam. Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
 
 Next, let's build up the servo shield for your OpenMV Cam so that it can control the RC car. You need to solder on the two 8-pin headers on either side of the servo controller board with the pin legs facing down. Then, solder on the two servo connection headers. The plastic parts on each header should be vertical and not flat against the servo controller board.
 
@@ -105,7 +105,7 @@ Next, using the servo extension header attach channels 0 and 1 from the servo sh
 
 Now, let's tiddy everything up. Use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires.
 
-Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter.
+Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MVOE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
 
 ### Step 5 - Installing the software:
 
