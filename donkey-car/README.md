@@ -173,17 +173,31 @@ Next, using the servo extension headers attach channels 0 and 1 from the servo s
 
 ![Controller](images/build/step(24)small.jpg "Controller")
 
-Also, put the black tube that comes with your RC Car over the antenna to protect the atenna.
+Finally, put the black tube that comes with your RC Car over the antenna to protect the antenna.
 
 ![Antenna](images/build/step(25)small.jpg "Antenna")
 
-Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
+If you bought the lipo battery upgrade parts let's install those next. First, attach the XT60 adapters to each lipo battery.
+
+![Adapters](images/build/step(26)small.jpg "Adapters")
+
+Then, replace the NiMh battery on your RC car with one of the lipo batteries. Make sure to place the battery with the wires going towards the front of the car like in the picture below.
+
+![Lipo](images/build/step(27)small.jpg "Lipo")
+
+After your done it should look like the picture below.
+
+![Done](images/build/step(28)small.jpg "Done")
+
+**LAST, MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!**
+
+![Danger](images/build/step(29)small.jpg "Danger")
 
 ### Step 5 - Installing the software:
 
-Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop. Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out of date. Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/main.py) and open the script in OpenMV IDE. How the script works is documented in the comments.
+Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop. Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out-of-date. Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments.
 
-Finally, the run the script click the run button on OpenMV IDE in the lower left-hand corner and your robocar should come to life! Once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button.
+Finally, run the script by clicking the run button on OpenMV IDE in the lower left-hand corner and your robocar should come to life! Once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then click ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button to start and stop the script between edits.
 
 ### Optional Step 1 - Building the Arduino based Servo Controller:
 
