@@ -39,7 +39,7 @@ Mini USB Cable<br />![Mini USB Cable](images/parts/musb.jpg "Mini USB Cable") | 
 
 **Sub-Total $47.69** - You may have some of the above parts lying around (like the Mini USB cable).
 
-In addition to all of the above I **heavily** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
+In addition to all of the above I **strongly** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
