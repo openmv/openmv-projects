@@ -243,6 +243,8 @@ Finally, go to ``Tools->Port`` and select the COM port your USB to serial conver
 
 ![Arduino_IDE_Done](images/build/step(39).png "Arduino_IDE_Done")
 
+The Arduino Servo Controller board allows you to directly control the robot's throttle and steering when the OpenMV Cam isn't running using the RC transmitter. Once the OpenMV Cam starts running and sending commands to the Arduino the Arduino will only drive the steering servo if the RC transmitter is on and will only drive the throttle if the RC transmitter throttle trigger is engaged (either for going forward or backwards). At any time you can use the steering control on the RC transmitter to override the OpenMV Cam steering. Finally, for fully autonomous control just adjust the throttle trim knob on the RC transmitter after turning it on with the trim set to zero. Make sure to set the trim knob back to zero after turning off the RC transmitter.
+
 ## How does the robocar follow the line?
 
 The OpenMV Cam uses linear regression to detect where the line is and then follow it. With the the OpenMV Cam the machine vision part is simple. Most of the work the script the OpenMV Cam is running has to do with turning the line detection into servo outputs to control the robocar. You can read more about what's going on at the blog post [here](https://openmv.io/blogs/news/linear-regression-line-following).
