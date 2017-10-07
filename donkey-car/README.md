@@ -239,7 +239,7 @@ Install the Arduino IDE from [here](https://www.arduino.cc/en/Main/Software). Do
 
 ![Arduino_IDE](images/build/step(38).png "Arduino_IDE")
 
-Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usally the highest numbered COM port) and then click the upload button (round left arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
+Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usally the highest numbered COM port) and then click the upload button (round right arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
 
 ![Arduino_IDE_Done](images/build/step(39).png "Arduino_IDE_Done")
 
