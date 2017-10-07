@@ -101,7 +101,7 @@ After you've attached both of the front legs to the base plate you can then atta
 
 ![Last](images/build/step(7)small.jpg "Last")
 
-Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lign-up exactly. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
+Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lineup exactly. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
 
 ![Align](images/build/step(8)small.jpg "Align")
 
@@ -113,7 +113,7 @@ Now, attach the the OpenMV Cam holder to the top of the neck part and use anothe
 
 ![Holder](images/build/step(10)small.jpg "Holder")
 
-Next, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. After removing the hood you should see the guts of your RC car like in the image below. We'll mount the base onto the four posts on your RC car. To secure the base we'll use the same metal clips the hood was held on with. However, we'll have to put some effort into doing this since cutouts to secure the base to the RC car are tight.
+Next, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. After removing the hood you should see the guts of your RC car like in the image below. We'll mount the base onto the four posts on your RC car. To secure the base we'll use the same metal clips the hood was held on with. However, we'll have to put some effort into doing this since cutouts on the base to secure the base to the RC car are tight.
 
 ![Hood](images/build/step(11)small.jpg "Hood")
 
