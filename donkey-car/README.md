@@ -165,11 +165,17 @@ Finally, let's stack everything up. You can mount shields on the OpenMV Cam from
 
 ### Step 4 - Putting it together:
 
-Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam mount on the top of the robocar body. To give yourself more freedom mount the OpenMV Cam upside down. You'll be able to rotate the OpenMV Cam's field of view in software.
+Attach the OpenMV Cam using it's two screw mounting holes to the OpenMV Cam mount on the top of the robocar body. To give ourselves more freedom we're mounting the OpenMV Cam upside down. You'll be able to un-rotate the OpenMV Cam's field of view in software.
 
-Next, using the servo extension header attach channels 0 and 1 from the servo shield to the throttle and steering servo wires respectively. Make sure to thread the servo extension wires through the hole in the base plate.
+![Mounting](images/build/step(23)small.jpg "Mounting")
 
-Now, let's tiddy everything up. Use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires. Also, put the black tube that comes with your RC Car over the antenna to protect the atenna.
+Next, using the servo extension headers attach channels 0 and 1 from the servo shield to the throttle and steering servo wires respectively. Make sure to thread the servo extension wires through the hole in the base plate. Also, use the zip ties to tie down all your wires so they aren't swaying everywhere. You don't want your robocar accidentally destroying itself by running over one of its wires. Your car should like the picture below once done.
+
+![Controller](images/build/step(24)small.jpg "Controller")
+
+Also, put the black tube that comes with your RC Car over the antenna to protect the atenna.
+
+![Antenna](images/build/step(25)small.jpg "Antenna")
 
 Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
 
