@@ -111,9 +111,27 @@ Next, insert one of the long M3 screws in between the neck holder and the neck p
 
 Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place.
 
-Finally, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. Mount the base plate onto the four stands exposed after you removed the plastic hood from your RC car. The base plate should snuggly sit on the four mounting posts.
+![Holder](images/build/step(10)small.jpg "Holder")
 
-Next, you need to make sure the base is firmly attached to the RC Car. First, bend the four metal clips slightly so we can more easily get them through the holes in the mounting stands. Next, cut away material using your exacto knife from the groves in the base to make space for the metal pins to go through the stand holes. Finally, push each pin through each stand hole to firmly attach the base to the RC Car. Once you've finished this your car should look like this below.
+Next, remove the plastic hood from your RC car. The hood is held on by four metal pin clips.
+
+![Hood](images/build/step(11)small.jpg "Hood")
+
+Now, we need to mount the base onto the car. So, bend the four metal clips slightly so we can more easily get them through the holes in the mounting stands.
+
+![Clip](images/build/step(12)small.jpg "Clip")
+
+Afterwards, cut away material using your exacto knife from the groves in the base to make space for the metal pins to go through the stand holes.
+
+![Exacto](images/build/step(13)small.jpg "Exacto")
+
+Finally, push each pin through each stand hole to firmly attach the base to the RC Car.
+
+![Attach](images/build/step(14)small.jpg "Attach")
+
+Once you've finished this your car should look like this below.
+
+![Done](images/build/step(15)small.jpg "Done")
 
 ### Step 3 - Assemble the head:
 
