@@ -231,7 +231,7 @@ Once you're finished with all of this your robot should look like this below. No
 
 ### Optional Step 2 - Programming the Arduino based Servo Controller:
 
-Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini usb cable to the USB converter and your laptop.
+Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini usb cable to the USB to serial converter and your laptop.
 
 ![Programmer](images/build/step(37)small.jpg "Programmer")
 
