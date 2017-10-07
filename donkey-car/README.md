@@ -225,7 +225,7 @@ Finally, let's connect the throttle servo to channel (1) on the Arduino, the ste
 
 ![Wire](images/build/step(35)small.jpg "Wire")
 
-Once you're finished with all of this your robot should look like this below.
+Once you're finished with all of this your robot should look like this below. Note that you should use the cable ties to clean-up the wiring job.
 
 ![Done](images/build/step(36)small.jpg "Done")
 
