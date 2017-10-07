@@ -173,11 +173,25 @@ Next, using the servo extension headers attach channels 0 and 1 from the servo s
 
 ![Controller](images/build/step(24)small.jpg "Controller")
 
-Also, put the black tube that comes with your RC Car over the antenna to protect the atenna.
+Finally, put the black tube that comes with your RC Car over the antenna to protect the antenna.
 
 ![Antenna](images/build/step(25)small.jpg "Antenna")
 
-Finally, if you bought the battery upgrade option remove the NiMh battery from your robocar and install the lipo battery with the XT60 to Tamiya adapter. MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
+If you bought the lipo battery upgrade parts let's install those next. First, attach the XT60 adapters to each lipo battery.
+
+![Adapters](images/build/step(26)small.jpg "Adapters")
+
+Then, replace the NiMh battery on your RC car with one of the lipo batteries. Make sure to place the battery with the wires going towards the front of the car like in the picture below.
+
+![Lipo](images/build/step(27)small.jpg "Lipo")
+
+After your done it should look like the picture below.
+
+![Done](images/build/step(28)small.jpg "Done")
+
+LAST, MAKE SURE TO MOVE THE JUMPER ON YOUR ESC TO THE LIPO POSITION TOO!
+
+![Danger](images/build/step(29)small.jpg "Danger")
 
 ### Step 5 - Installing the software:
 
