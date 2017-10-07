@@ -135,13 +135,33 @@ Once you've finished this your car should look like this below.
 
 ### Step 3 - Assemble the head:
 
-Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC. Then reattach the lens mount. Next, we need to solder the pin headers onto the OpenMV Cam that it comes with. Using a soldering iron attach the two 8-pin headers on each side of the camera so that the 8-pin header legs are sticking out the back of the OpenMV Cam. Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
+Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC.
 
-Next, let's build up the servo shield for your OpenMV Cam so that it can control the RC car. You need to solder on the two 8-pin headers on either side of the servo controller board with the pin legs facing down. Then, solder on the two servo connection headers. The plastic parts on each header should be vertical and not flat against the servo controller board.
+![Clean-up](images/build/step(16)small.jpg "Clean-up")
+
+Then reattach the lens mount. Next, we need to solder the pin headers onto the OpenMV Cam that it comes with. Using a soldering iron attach the two 8-pin headers on each side of the camera so that the 8-pin header legs are sticking out the back of the OpenMV Cam.
+
+![Legs](images/build/step(17)small.jpg "Legs")
+
+Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
+
+![Lens](images/build/step(18)small.jpg "Lens")
+
+Next, let's build up the servo shield for your OpenMV Cam so that it can control the RC car.
+
+![Shield](images/build/step(19)small.jpg "Shield")
+
+You need to solder on the two 8-pin headers on either side of the servo controller board with the pin legs facing down. Then, solder on the two servo connection headers. The plastic parts on each header should be vertical and not flat against the servo controller board.
+
+![Soldered](images/build/step(20)small.jpg "Soldered")
 
 If you bought a WiFi shield let's build that up too. Solder the two 8-pin headers it came with on either side of it with the legs facing down.
 
-Finally, let's stack everything up. You can mount shields on the OpenMV Cam from either the top or bottom of the board. Let's put the WiFi shield on the top of the OpenMV Cam and the servo shield on the bottom. However, let's use some of those extra 8-pin headers we have to space out the servo shield from the OpenMV Cam so we have more space to mount it to the body. So, insert an extra 8-pin header on each side of the OpenMV Cam between the OpenMV Cam and the servo shield connection.
+![WiFi](images/build/step(21)small.jpg "WiFi")
+
+Finally, let's stack everything up. You can mount shields on the OpenMV Cam from either the top or bottom of the board. Let's put the WiFi shield on the bottom of the OpenMV Cam and the servo shield on the top.
+
+![Stack](images/build/step(22)small.jpg "Stack")
 
 ### Step 4 - Putting it together:
 
