@@ -231,7 +231,17 @@ Once you're finished with all of this your robot should look like this below. No
 
 ### Optional Step 2 - Programming the Arduino based Servo Controller:
 
-Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini usb cable to the USB converter and your laptop. Install the Arduino IDE from [here](https://www.arduino.cc/en/Main/Software). Download the servo controller code from [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/servo_controller/servo_controller.ino) and open it using the Arduino IDE. Go to ``Tools->Board`` and select ``Arduino Pro or Arduino Pro Mini`` and ``Tools->Processor`` and select ``Atmega328 (5V, 16Mhz)`` . Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usally the highest numbered COM port) and then click the upload button (round left arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
+Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini usb cable to the USB converter and your laptop.
+
+![Programmer](images/build/step(37)small.jpg "Programmer")
+
+Install the Arduino IDE from [here](https://www.arduino.cc/en/Main/Software). Download the servo controller code from [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/servo_controller/servo_controller.ino) and open it using the Arduino IDE. Go to ``Tools->Board`` and select ``Arduino Pro or Arduino Pro Mini`` and ``Tools->Processor`` and select ``Atmega328 (5V, 16Mhz)`` .
+
+![Arduino_IDE](images/build/step(38).png "Arduino_IDE")
+
+Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usally the highest numbered COM port) and then click the upload button (round left arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
+
+![Arduino_IDE_Done](images/build/step(39).png "Arduino_IDE_Done")
 
 ## How does the robocar follow the line?
 
