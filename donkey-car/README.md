@@ -203,11 +203,31 @@ Finally, run the script by clicking the run button on OpenMV IDE in the lower le
 
 If you opted to get the Arduino based Servo Controller so you can use your RC controller to act as a kill switch for your robocar (which is a **VERY** good idea) here's how to build it.
 
-First, solder two 8-pin female headers onto either side of the servo controller board. Note that since we want this servo controller to mount onto the back of the OpenMV Cam we're going to do this in reverse. The female side of these headers should be on the side of the PCB that says ``123D Circuits``. Next, on the Arduino Pro Mini solder male pin headers facing down on either side of it. As for the row of pin headers that go across it on it's back solder male pin headers there facing up. Finally, solder the Arduino Pro Mini to the servo controller board such that the button on it is over the row of holes going across the bottom of the servo controller board.
+![Parts](images/build/step(30)small.jpg "Parts")
 
-Now, install male pin headers facing up on the servo controller board in all the available remaining holes not covered by the Arduino Pro Mini. The only holes that should have anything in them are the eight holes going across the bottom of the servo controller board under the Arduino Pro Mini.
+First, solder up the Arduino Pro Mini like the image below.
 
-Finally mount the Arduino based Servo Controller board to the back of your OpenMV Cam. You'll want to use two of the extra 8-pin female headers to act as spacers between the OpenMV Cam and the servo controller board. Note that the servo controller board should mount such that it's not sticking out of the OpenMV Cam's form factor.
+![Arduino](images/build/step(31)small.jpg "Arduino")
+
+Next, solder the Arduino onto the ``123D Circuits`` circuits main board like below. We're trying to mount this onto the back of the OpenMV Cam board so the layout looks a little bit reversed. Just copy what's in the image below
+
+![Controller](images/build/step(32)small.jpg "Controller")
+
+It should look like this on the bottom.
+
+![Bottom](images/build/step(33)small.jpg "Bottom")
+
+Now, mount the board onto the back of the OpenMV Cam shield stack-up. Note that we don't need the extra length of the board connectors coming out of the back. Feel free to trim them if you like. Or, leave them on to stack more boards. If you decide to leave them on make sure they don't short with each other.
+
+![Stack-up](images/build/step(34)small.jpg "Stack-up")
+
+Finally, let's connect the throttle servo to channel (1) on the Arduino, the steering servo to channel (2), the RC radio receiver throttle output to channel (3), and the RC radio receiver steering output to channel (4). Note that the RC radio receiver's steering output is channel (1) and it's throttle output is channel (2). Note that you're going to need to use the short-length female to female RC servo wire extension cables and long extension cables to wire up the RC radio receiver to the Arduino Servo Controller board.
+
+![Wire](images/build/step(35)small.jpg "Wire")
+
+Once you're finished with all of this your robot should look like this below.
+
+![Done](images/build/step(36)small.jpg "Done")
 
 ### Optional Step 2 - Programming the Arduino based Servo Controller:
 
