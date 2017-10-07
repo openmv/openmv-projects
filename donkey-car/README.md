@@ -209,7 +209,7 @@ First, solder up the Arduino Pro Mini like the image below.
 
 ![Arduino](images/build/step(31)small.jpg "Arduino")
 
-Next, solder the Arduino onto the ``123D Circuits`` circuits main board like below. We're trying to mount this onto the back of the OpenMV Cam board so the layout looks a little bit reversed. Just copy what's in the image below
+Next, solder the Arduino onto the ``123D Circuits`` circuits main board like below. We're trying to mount this onto the back of the OpenMV Cam board so the layout looks a little bit reversed. Just copy what's in the image below.
 
 ![Controller](images/build/step(32)small.jpg "Controller")
 
@@ -221,7 +221,7 @@ Now, mount the board onto the back of the OpenMV Cam shield stack-up. Note that 
 
 ![Stack-up](images/build/step(34)small.jpg "Stack-up")
 
-Finally, let's connect the throttle servo to channel (1) on the Arduino, the steering servo to channel (2), the RC radio receiver throttle output to channel (3), and the RC radio receiver steering output to channel (4). Note that the RC radio receiver's steering output is channel (1) and it's throttle output is channel (2). Note that you're going to need to use the short-length female to female RC servo wire extension cables and long extension cables to wire up the RC radio receiver to the Arduino Servo Controller board.
+Finally, let's connect the throttle servo to channel (1) on the Arduino, the steering servo to channel (2), the RC radio receiver throttle output to channel (3), and the RC radio receiver steering output to channel (4). Note that the RC radio receiver's steering output is channel (1) and it's throttle output is channel (2). Note that you're going to need to use the short-length female-to-female RC servo wire extension cables and long extension cables to wire up the RC radio receiver to the Arduino Servo Controller board.
 
 ![Wire](images/build/step(35)small.jpg "Wire")
 
