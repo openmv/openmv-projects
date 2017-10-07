@@ -195,9 +195,27 @@ After your done it should look like the picture below.
 
 ### Step 5 - Installing the software:
 
-Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop. Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out-of-date. Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments.
+Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop.
 
-Finally, run the script by clicking the run button on OpenMV IDE in the lower left-hand corner and your robocar should come to life! Once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then click ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button to start and stop the script between edits.
+![OpenMV_Cam](images/build/step(40)small.jpg "OpenMV_Cam")
+
+Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out-of-date.
+
+![Update](images/build/step(41).jpg "Update")
+
+Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. Afterwards, OpenMV IDE will update your OpenMV Cam's firmware. Note that your OpenMV Cam is unbrickable, so, if anything goes wrong you can recover.
+
+![Firmware](images/build/step(42).jpg "Firmware")
+
+Now that your OpenMV Cam is updated. You need to focus the lens. Please run the hello world script (click the green run arrow) and turn the lens until the picture comes into focus on the frame buffer viewer in OpenMV IDE.
+
+![View](images/build/step(43).jpg "View")
+
+After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments. Note that you need to set the ``ARDUINO_SERVO_CONTROLLER_ATTACHED`` variable to ``True`` for the OpenMV Cam to output serial data to control the Arduino Servo Controller Shield and ``False`` for the OpenMV Cam to output serial data to control the Servo Controller Shield. 
+
+![Script](images/build/step(44).jpg "Script")
+
+Finally, once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then click ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button to start and stop the script between edits.
 
 ### Optional Step 1 - Building the Arduino based Servo Controller:
 
