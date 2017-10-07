@@ -89,11 +89,11 @@ Next, try to insert the 3D printed OpenMV Cam mount neck part into it's holder. 
 
 ### Step 2 - Assemble the body:
 
-The rollbar mounts to the base plate using three M2 screws and nuts - a pair for each leg on the rollbar. Additionally, feel free to use any M2 screw length that fits. Moving on, before mounting the rollbar to the base plate make sure the screw stands on the base plate are facing up. The screw stands are for a Raspberry Pi and a servo controller which we won't be using, but, the screw holes shouldn't be upside down if you want to mount something else there later on.
+The rollbar mounts to the base plate using three M2 screws and nuts - a pair for each leg on the rollbar. Feel free to use any M2 screw length that fits. Moving on, before mounting the rollbar to the base plate make sure the screw stands on the base plate are facing up. The screw stands are for a Raspberry Pi and a servo controller which we won't be using, but, the screw holes shouldn't be upside down if you want to mount something else on there later on.
 
 ![Body](images/build/step(5)small.jpg "Body")
 
-To attach the rollbar to the base plate you need to insert a nut into the slots on either side of the front two rollbar legs (note that the screws are inserted from the bottom of the base plate). You then have to keep the nuts in place while screwing in the M2 screws. Doing this isn't particularly easy but doesn't require more that two hands. You may wish to use a tool to keep the nuts from spinning in their slots.
+To attach the rollbar to the base plate you need to insert a nut into the slots on either side of the front two rollbar legs (note that the screws are inserted from the bottom of the base plate). You then have to keep the nuts in place while screwing in the M2 screws. Doing this isn't particularly easy. You may wish to use a tool to keep the nuts from spinning in their slots.
 
 ![Body](images/build/step(6)small.jpg "Body")
 
@@ -101,19 +101,37 @@ After you've attached both of the front legs to the base plate you can then atta
 
 ![Last](images/build/step(7)small.jpg "Last")
 
-Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lign-up exactly. However, you should be able to get the screws all in. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
+Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lign-up exactly. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
 
 ![Align](images/build/step(8)small.jpg "Align")
 
-Next, insert one of the long M3 screws in between the neck holder and the neck part's bottom hole. Use an M3 locknut afterwards to tighten the connection to make sure the neck part is stable.
+Moving on, insert one of the long M3 screws in between the neck holder and the neck part's bottom hole. Use an M3 locknut afterwards to tighten the connection to make sure the neck part is stable.
 
 ![Lock](images/build/step(9)small.jpg "Lock")
 
-Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place.
+Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place. Make sure to get the orientation right like in the picture below.
 
-Finally, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. Mount the base plate onto the four stands exposed after you removed the plastic hood from your RC car. The base plate should snuggly sit on the four mounting posts.
+![Holder](images/build/step(10)small.jpg "Holder")
 
-Next, you need to make sure the base is firmly attached to the RC Car. First, bend the four metal clips slightly so we can more easily get them through the holes in the mounting stands. Next, cut away material using your exacto knife from the groves in the base to make space for the metal pins to go through the stand holes. Finally, push each pin through each stand hole to firmly attach the base to the RC Car. Once you've finished this your car should look like this below.
+Next, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. After removing the hood you should see the guts of your RC car like in the image below. We'll mount the base onto the four posts on your RC car. To secure the base we'll use the same metal clips the hood was held on with. However, we'll have to put some effort into doing this since cutouts to secure the base to the RC car are tight.
+
+![Hood](images/build/step(11)small.jpg "Hood")
+
+So first, bend the four metal clips slightly so we can more easily get them through the holes in the mounting stands after we've attached the base.
+
+![Clip](images/build/step(12)small.jpg "Clip")
+
+Afterwards, cut away material using your exacto knife from the groves in the base to make space for the metal pins to go through the stand holes.
+
+![Exacto](images/build/step(13)small.jpg "Exacto")
+
+Finally, push each pin through each stand hole to firmly attach the base to the RC Car.
+
+![Attach](images/build/step(14)small.jpg "Attach")
+
+Once you've finished this your car should look like this below.
+
+![Done](images/build/step(15)small.jpg "Done")
 
 ### Step 3 - Assemble the head:
 
