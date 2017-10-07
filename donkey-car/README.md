@@ -135,7 +135,7 @@ Once you've finished this your car should look like this below.
 
 ### Step 3 - Assemble the head:
 
-Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a microfiber cloth. Make sure to get off any dirt and don't leave any fibers on the camera IC.
+Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a Q-Tip. Make sure to get off any dirt and don't leave any fibers on the camera IC.
 
 ![Clean-up](images/build/step(16)small.jpg "Clean-up")
 
@@ -159,7 +159,7 @@ If you bought a WiFi shield let's build that up too. Solder the two 8-pin header
 
 ![WiFi](images/build/step(21)small.jpg "WiFi")
 
-Finally, let's stack everything up. You can mount shields on the OpenMV Cam from either the top or bottom of the board. Let's put the WiFi shield on the bottom of the OpenMV Cam and the servo shield on the top.
+Finally, let's stack everything up. You can mount shields on the OpenMV Cam from either the top or bottom of the board. But, let's put the WiFi shield on the bottom of the OpenMV Cam and the servo shield on the top.
 
 ![Stack](images/build/step(22)small.jpg "Stack")
 
