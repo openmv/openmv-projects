@@ -85,15 +85,31 @@ Your 3D printed parts are most-likely going to need some cleanup. Using the exta
 
 Next, try to insert the 3D printed OpenMV Cam mount neck part into it's holder. The parts are designed to fit snuggly so this takes a bit of work. If you're having trouble try widening the neck holder with a file. Since we want the most height for the camera you just need to get the neck mount in enough to line up the first set of holes.
 
-![Insert](images/build/step(5)small.jpg "Insert")
+![Insert](images/build/step(4)small.jpg "Insert")
 
 ### Step 2 - Assemble the body:
 
 The rollbar mounts to the base plate using three M2 screws and nuts - a pair for each leg on the rollbar. Additionally, feel free to use any M2 screw length that fits. Moving on, before mounting the rollbar to the base plate make sure the screw stands on the base plate are facing up. The screw stands are for a Raspberry Pi and a servo controller which we won't be using, but, the screw holes shouldn't be upside down if you want to mount something else there later on.
 
-To attach the rollbar to the base plate you need to insert a nut into the slots on either side of the front two rollbar legs (note that the screws are inserted from the bottom of the base plate). You then have to keep the nuts in place while screwing in the M2 screws. Doing this isn't particularly easy but doesn't require more that two hands. You may wish to use a tool to keep the nuts from spinning in their slots. After you've attached both of the front legs to the base plate you can then attach the third back leg. This should be rather easy as you can just press down on the nut from the top to keep it from spinning as you tighten the M2 screw from the bottom.
+![Body](images/build/step(5)small.jpg "Body")
 
-Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lign-up exactly. However, you should be able to get the screws all in. Next, insert one of the long M3 screws in between the neck holder and the neck part's bottom hole. Use an M3 locknut afterwards to tighten the connection to make sure the neck part is stable. Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place.
+To attach the rollbar to the base plate you need to insert a nut into the slots on either side of the front two rollbar legs (note that the screws are inserted from the bottom of the base plate). You then have to keep the nuts in place while screwing in the M2 screws. Doing this isn't particularly easy but doesn't require more that two hands. You may wish to use a tool to keep the nuts from spinning in their slots.
+
+![Body](images/build/step(6)small.jpg "Body")
+
+After you've attached both of the front legs to the base plate you can then attach the third back leg. This should be rather easy as you can just press down on the nut from the top to keep it from spinning as you tighten the M2 screw from the bottom.
+
+![Last](images/build/step(7)small.jpg "Last")
+
+Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lign-up exactly. However, you should be able to get the screws all in. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
+
+![Align](images/build/step(8)small.jpg "Align")
+
+Next, insert one of the long M3 screws in between the neck holder and the neck part's bottom hole. Use an M3 locknut afterwards to tighten the connection to make sure the neck part is stable.
+
+![Lock](images/build/step(9)small.jpg "Lock")
+
+Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place.
 
 Finally, remove the plastic hood from your RC car. The hood is held on by four metal pin clips. Mount the base plate onto the four stands exposed after you removed the plastic hood from your RC car. The base plate should snuggly sit on the four mounting posts.
 
