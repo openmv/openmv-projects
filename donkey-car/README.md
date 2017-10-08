@@ -36,7 +36,7 @@ Male Headers<br />![Male Headers](images/parts/male.jpg "Male Headers") | https:
 8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | https://www.amazon.com/Venel-Electronic-Component-Stackable-Shields/dp/B071454KP1<br /><br />Note: You will need a soldering iron and solder to attach these pin headers to the above PCB. | 1 | $5.08
 RC Receiver Servo Adapters<br />![RC Receiver Servo Adapters](images/parts/shorts.jpg "RC Receiver Servo Adapters") | https://www.amazon.com/Hobbypower-Futaba-Servo-Extension-Cable/dp/B00RVDVWTC | 1 | $4.49
 
-**Sub-Total $42.20** - You may have some of the above parts lying around (like the Mini USB cable).
+**Sub-Total $42.20** - You may have some of the above parts lying around.
 
 In addition to all of the above I **strongly** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not lose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
 
@@ -250,7 +250,7 @@ Once you're finished with all of this your robot should look like this below. No
 
 ### Optional Step 2 - Programming the Arduino based Servo Controller:
 
-Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini USB cable to the USB to serial converter and your laptop.
+Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the micro USB cable to the USB to serial converter and your laptop.
 
 ![Programmer](images/build/step(37)small.jpg "Programmer")
 
