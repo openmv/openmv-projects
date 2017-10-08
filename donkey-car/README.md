@@ -11,7 +11,7 @@ The OpenMV Cam Donkey Car is designed to be easy to build out of parts that you 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 1/16 2.4Ghz Exceed RC Magnet Car<br />![1/16 2.4Ghz Exceed RC Magnet Car](images/parts/magnet-car.jpg "1/16 2.4Ghz Exceed RC Magnet Car") | https://www.amazon.com/2-4Ghz-Exceed-RC-Magnet-Electric/dp/9269803775 | 1 | $79.95
-Magenet Car Base Plate<br />![Magnet Car Base Plate](images/parts/base.jpg "Magnet Car Base Plate") | https://www.shapeways.com/product/6YD3XR9ND/magnet-car-base-plate<br /><br />You can download the STL file for this part [here](download/Magnet_Plate_v7.stl).<br /><br />*Magnet Base Plate by Adam Conway*. | 1 | $55.10
+Magnet Car Base Plate<br />![Magnet Car Base Plate](images/parts/base.jpg "Magnet Car Base Plate") | https://www.shapeways.com/product/6YD3XR9ND/magnet-car-base-plate<br /><br />You can download the STL file for this part [here](download/Magnet_Plate_v7.stl).<br /><br />*Magnet Base Plate by Adam Conway*. | 1 | $55.10
 Magnet Car Roll Cage</br >![Magnet Car Roll Cage](images/parts/cage.jpg "Magnet Car Roll Cage") | https://www.shapeways.com/product/74VXFV7AT/magnet-car-roll-cage<br /><br />You can download the STL file for this part [here](download/Magnet_Roll_Cage_v2.stl).<br /><br />*Magnet Car Roll Cage by Adam Conway*. | 1 | $66.92
 OpenMV Cam Donkey Mount<br />![OpenMV Cam Donkey Mount](images/parts/camera-mount.jpg "OpenMV Cam Donkey Mount") | https://www.shapeways.com/product/G7YQBUMRC/openmv-cam-donkey-mount<br /><br />You can download the STL file for these parts [here](download/OpenMV_Donkey_Mount.stl).<br /><br />*OpenMV Cam Donkey Mount by Chris Anderson*. | 1 | $21.18
 M2 Machine Screw Set<br />![M2 Machine Screw Set](images/parts/screws.jpg "M2 Machine Screw Set") | https://www.amazon.com/Glarks-280-Pieces-Phillips-Stainless-Assortment/dp/B01G0KRGXC | 1 | $11.89
@@ -31,15 +31,14 @@ Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 5V 16 MHz Arduino Pro Mini<br />![5V 16 MHz Arduino Pro Mini](images/parts/arduino.jpg "5V 16 MHz Arduino Pro Mini") | https://www.amazon.com/Arducam-Atmega328-Development-Compatible-Arduino/dp/B01981EBBA | 1 | $6.49
 Arduino Pro Mini Programmer<br />![Arduino Pro Mini Programmer](images/parts/programmer.jpg "Arduino Pro Mini Programmer") | https://www.amazon.com/Micro-Basic-Breakout-Module-Arduino/dp/B00N4MCS1A | 1 | $9.95
-Servo Controller Board<br />![Servo Controller Board](images/parts/controller.jpg "Servo Controller Board") | https://oshpark.com/shared_projects/2bKUWmbq<br /><br />You can download the Gerber files for this part [here](https://644db4de3505c40a0444-327723bce298e3ff5813fb42baeefbaa.ssl.cf1.rackcdn.com/ab7a7db45c3c6b37bcca1d8fc84e26e4.zip).<br /><br />*Servo Controller Board by Chris Anderson*. | 1 | $10.50 
+Servo Controller Board<br />![Servo Controller Board](images/parts/controller.jpg "Servo Controller Board") | https://oshpark.com/shared_projects/2bKUWmbq<br /><br />You can download the Gerber files for this part [here](https://644db4de3505c40a0444-327723bce298e3ff5813fb42baeefbaa.ssl.cf1.rackcdn.com/ab7a7db45c3c6b37bcca1d8fc84e26e4.zip).<br /><br />*Servo Controller Board by Chris Anderson*. | 1 | $10.50
 Male Headers<br />![Male Headers](images/parts/male.jpg "Male Headers") | https://www.amazon.com/SamIdea-15-Pack-Straight-Connector-Prototype/dp/B01M9FCAXW<br /><br />Note: You will need a soldering iron and solder to attach these pin headers to the above PCB. | 1 | $5.69
 8-pin Stackable Headers<br />![8-pin Stackable Headers](images/parts/headers.jpg "8-pin Stackable Headers") | https://www.amazon.com/Venel-Electronic-Component-Stackable-Shields/dp/B071454KP1<br /><br />Note: You will need a soldering iron and solder to attach these pin headers to the above PCB. | 1 | $5.08
 RC Receiver Servo Adapters<br />![RC Receiver Servo Adapters](images/parts/shorts.jpg "RC Receiver Servo Adapters") | https://www.amazon.com/Hobbypower-Futaba-Servo-Extension-Cable/dp/B00RVDVWTC | 1 | $4.49
-Mini USB Cable<br />![Mini USB Cable](images/parts/musb.jpg "Mini USB Cable") | https://www.amazon.com/AmazonBasics-USB-2-0-Cable-Male/dp/B00NH11N5A | 1 | $5.49
 
-**Sub-Total $47.69** - You may have some of the above parts lying around (like the Mini USB cable).
+**Sub-Total $42.20** - You may have some of the above parts lying around (like the Mini USB cable).
 
-In addition to all of the above I **strongly** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not loose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
+In addition to all of the above I **strongly** recommend that your purchase a wide angle lens for your OpenMV Cam. With the wide angle lens it's much easier for your self-driving car to make tight turns and not lose sight of the road ahead. Without it you *will* have to reduce your maximum speed in-order to make tight turns.
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
@@ -63,13 +62,13 @@ Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
 OpenMV Cam WiFi Shield<br />![OpenMV Cam WiFi Shield](images/parts/wifi.jpg "OpenMV Cam WiFi Shield") | https://openmv.io/products/wifi-shield | 1 | $35.00
 
-*Note, as of 8/15/2017 wireless programming has not yet been implemented for the OpenMV Cam but it is comming soon.*
+*Note, as of 8/15/2017 wireless programming has not yet been implemented for the OpenMV Cam but it is coming soon.*
 
 **Sub-Total $35.00**
 
 ## Assembly
 
-Once you've purchased and recieved all the parts you want for your DIY Robocar above you can now build it.
+Once you've purchased and received all the parts you want for your DIY Robocar above you can now build it.
 
 ![Parts](images/build/step(1)small.jpg "Parts")
 
@@ -83,7 +82,7 @@ Your 3D printed parts are most-likely going to need some cleanup. Using the exta
 
 ![De-bur](images/build/step(3)small.jpg "De-bur")
 
-Next, try to insert the 3D printed OpenMV Cam mount neck part into it's holder. The parts are designed to fit snuggly so this takes a bit of work. If you're having trouble try widening the neck holder with a file. Since we want the most height for the camera you just need to get the neck mount in enough to line up the first set of holes.
+Next, try to insert the 3D printed OpenMV Cam mount neck part into its holder. The parts are designed to fit snuggly so this takes a bit of work. If you're having trouble try widening the neck holder with a file. Since we want the most height for the camera you just need to get the neck mount in enough to line up the first set of holes.
 
 ![Insert](images/build/step(4)small.jpg "Insert")
 
@@ -101,7 +100,7 @@ After you've attached both of the front legs to the base plate you can then atta
 
 ![Last](images/build/step(7)small.jpg "Last")
 
-Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lineup exactly. I reconmend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
+Next, attach the OpenMV Cam neck holder mount to the top of the rollbar using four more medium-length M2 screws. Note that this will take some work since the screw holes are unlikely to lineup exactly. I recommend screwing in all four screws only a little bit to get them started first before screwing each one in all the way.
 
 ![Align](images/build/step(8)small.jpg "Align")
 
@@ -109,7 +108,7 @@ Moving on, insert one of the long M3 screws in between the neck holder and the n
 
 ![Lock](images/build/step(9)small.jpg "Lock")
 
-Now, attach the the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place. Make sure to get the orientation right like in the picture below.
+Now, attach the OpenMV Cam holder to the top of the neck part and use another long M3 screw and locknut secure the holder in place. Make sure to get the orientation right like in the picture below.
 
 ![Holder](images/build/step(10)small.jpg "Holder")
 
@@ -135,7 +134,7 @@ Once you've finished this your car should look like this below.
 
 ### Step 3 - Assemble the head:
 
-Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alchol and a Q-Tip. Make sure to get off any dirt and don't leave any fibers on the camera IC.
+Now we're going to assemble the OpenMV Cam head of your Robocar. First, remove the lens mount from your OpenMV Cam using a screw driver and clean off the camera IC under the lens mount using some isopropyl alcohol and a Q-Tip. Make sure to get off any dirt and don't leave any fibers on the camera IC.
 
 ![Clean-up](images/build/step(16)small.jpg "Clean-up")
 
@@ -143,7 +142,7 @@ Then reattach the lens mount. Next, we need to solder the pin headers onto the O
 
 ![Legs](images/build/step(17)small.jpg "Legs")
 
-Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with with the wide angle lens.
+Finally, if you bought the wide angle lens above replace the lens that your OpenMV Cam comes with the wide angle lens.
 
 ![Lens](images/build/step(18)small.jpg "Lens")
 
@@ -177,11 +176,11 @@ Finally, put the black tube that comes with your RC Car over the antenna to prot
 
 ![Antenna](images/build/step(25)small.jpg "Antenna")
 
-If you bought the lipo battery upgrade parts let's install those next. First, attach the XT60 adapters to each lipo battery.
+If you bought the LiPo battery upgrade parts let's install those next. First, attach the XT60 adapters to each LiPo battery.
 
 ![Adapters](images/build/step(26)small.jpg "Adapters")
 
-Then, replace the NiMh battery on your RC car with one of the lipo batteries. Make sure to place the battery with the wires going towards the front of the car like in the picture below.
+Then, replace the NiMh battery on your RC car with one of the LiPo batteries. Make sure to place the battery with the wires going towards the front of the car like in the picture below.
 
 ![Lipo](images/build/step(27)small.jpg "Lipo")
 
@@ -195,7 +194,7 @@ After your done it should look like the picture below.
 
 ### Step 5 - Installing the software:
 
-Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro usb cable to your OpenMV Cam and to your laptop.
+Because you're using the OpenMV Cam this is going to be the easiest part. Download OpenMV IDE from [here](https://openmv.io/pages/download) and install it on your laptop. Once that's done attach the micro USB cable to your OpenMV Cam and to your laptop.
 
 ![OpenMV_Cam](images/build/step(40)small.jpg "OpenMV_Cam")
 
@@ -211,7 +210,7 @@ Now that your OpenMV Cam is updated. You need to focus the lens. Please run the 
 
 ![View](images/build/step(43).jpg "View")
 
-After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments. Note that you need to set the ``ARDUINO_SERVO_CONTROLLER_ATTACHED`` variable to ``True`` for the OpenMV Cam to output serial data to control the Arduino Servo Controller Shield and ``False`` for the OpenMV Cam to output serial data to control the Servo Controller Shield. 
+After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments. Note that you need to set the ``ARDUINO_SERVO_CONTROLLER_ATTACHED`` variable to ``True`` for the OpenMV Cam to output serial data to control the Arduino Servo Controller Shield and ``False`` for the OpenMV Cam to output serial data to control the Servo Controller Shield.
 
 ![Script](images/build/step(44).jpg "Script")
 
@@ -239,7 +238,7 @@ Now, mount the board onto the back of the OpenMV Cam shield stack-up. Note that 
 
 ![Stack-up](images/build/step(34)small.jpg "Stack-up")
 
-Finally, let's connect the steering servo to channel (1) on the Arduino, the throttle servo to channel (2), the RC radio receiver steering output to channel (3), and the RC radio receiver throttle output to channel (4). Note that the RC radio receiver's steering output is channel (1) and it's throttle output is channel (2). Also, you're going to need to use the short-length female-to-female RC servo wire extension cables and long extension cables to wire up the RC radio receiver to the Arduino Servo Controller board.
+Finally, let's connect the steering servo to channel (1) on the Arduino, the throttle servo to channel (2), the RC radio receiver steering output to channel (3), and the RC radio receiver throttle output to channel (4). Note that the RC radio receiver's steering output is channel (1) and its throttle output is channel (2). Also, you're going to need to use the short-length female-to-female RC servo wire extension cables and long extension cables to wire up the RC radio receiver to the Arduino Servo Controller board.
 
 ![Wire](images/build/step(35)small.jpg "Wire")
 
@@ -249,7 +248,7 @@ Once you're finished with all of this your robot should look like this below. No
 
 ### Optional Step 2 - Programming the Arduino based Servo Controller:
 
-Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini usb cable to the USB to serial converter and your laptop.
+Connect the USB to serial adapter to the 6-pin header sticking out of the top on your Arduino Pro Mini. Make sure to connect ``GND`` to ``GND`` and ``DTR`` to ``DTR``. Next, connect the mini USB cable to the USB to serial converter and your laptop.
 
 ![Programmer](images/build/step(37)small.jpg "Programmer")
 
@@ -257,7 +256,7 @@ Install the Arduino IDE from [here](https://www.arduino.cc/en/Main/Software). Do
 
 ![Arduino_IDE](images/build/step(38).png "Arduino_IDE")
 
-Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usally the highest numbered COM port) and then click the upload button (round right arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
+Finally, go to ``Tools->Port`` and select the COM port your USB to serial convert is connected to (it's usually the highest numbered COM port) and then click the upload button (round right arrow). The Arduino IDE should then compile the code and start programming the Arduino Pro Mini. Once it's finished remove the USB to serial converter from your Arduino Pro Mini and your servo controller board will be ready to use.
 
 ![Arduino_IDE_Done](images/build/step(39).png "Arduino_IDE_Done")
 
@@ -265,4 +264,4 @@ The Arduino Servo Controller board allows you to directly control the robot's th
 
 ## How does the robocar follow the line?
 
-The OpenMV Cam uses linear regression to detect where the line is and then follow it. With the the OpenMV Cam the machine vision part is simple. Most of the work the script the OpenMV Cam is running has to do with turning the line detection into servo outputs to control the robocar. You can read more about what's going on at the blog post [here](https://openmv.io/blogs/news/linear-regression-line-following).
+The OpenMV Cam uses linear regression to detect where the line is and then follow it. With the OpenMV Cam the machine vision part is simple. Most of the work the script the OpenMV Cam is running has to do with turning the line detection into servo outputs to control the robocar. You can read more about what's going on at the blog post [here](https://openmv.io/blogs/news/linear-regression-line-following).
