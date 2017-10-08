@@ -200,21 +200,23 @@ Because you're using the OpenMV Cam this is going to be the easiest part. Downlo
 
 Next, launch OpenMV IDE and hit the connect button the bottom left hand corner of the IDE. After doing so OpenMV IDE should display on the bottom right hand corner that your OpenMV Cam's firmware is out-of-date.
 
-![Update](images/build/step(41).jpg "Update")
+![Update](images/build/step(41).png "Update")
 
 Click on the text and walk through the dialog to update your OpenMV Cam's firmware. When OpenMV IDE asks you if you want to erase the OpenMV Cam's flash drive select yes. Afterwards, OpenMV IDE will update your OpenMV Cam's firmware. Note that your OpenMV Cam is unbrickable, so, if anything goes wrong you can recover.
 
-![Firmware](images/build/step(42).jpg "Firmware")
+![Firmware](images/build/step(42).png "Firmware")
 
 Now that your OpenMV Cam is updated. You need to focus the lens. Please run the hello world script (click the green run arrow) and turn the lens until the picture comes into focus on the frame buffer viewer in OpenMV IDE.
 
-![View](images/build/step(43).jpg "View")
+![View](images/build/step(43).png "View")
 
-After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments. Note that you need to set the ``ARDUINO_SERVO_CONTROLLER_ATTACHED`` variable to ``True`` for the OpenMV Cam to output serial data to control the Arduino Servo Controller Shield and ``False`` for the OpenMV Cam to output serial data to control the Servo Controller Shield.
+After doing all of this download the code for the robocar [here](https://github.com/openmv/openmv-projects/blob/master/donkey-car/line_follower_main.py) and open the script in OpenMV IDE. How the script works is documented in the comments. Note that you need to set the ``ARDUINO_SERVO_CONTROLLER_ATTACHED`` variable to ``True`` for the OpenMV Cam to output serial data to control the Arduino Servo Controller Shield and ``False`` for the OpenMV Cam to output serial data to control the Servo Controller Shield (the non-Arduino one).
 
-![Script](images/build/step(44).jpg "Script")
+![Script](images/build/step(44).png "Script")
 
 Finally, once you're done tweaking settings go to ``Tools->Save open script to OpenMV Cam`` and save the script while keeping comments. Then click ``Tools->Reset OpenMV Cam``. You can now disconnect your OpenMV Cam from your laptop and it will run the script by itself. Follow the above two steps each time you want your OpenMV Cam to run the script without the laptop attached to it. For quick testing and debug while your laptop is connected just use the run button and stop button to start and stop the script between edits.
+
+*If you're using the Servo Controller Shield (the non-Arduino one), you also need to copy two scripts from OpenMV IDE to the OpenMV Cam board for things to work. Please go to ``Files->Examples->15-Servo-Shield->pca9865.py`` and save it on your OpenMV Cam's internal flash drive. Additionally, you also need to save ``Files->Examples->15-Servo-Shield->servo.py`` on your OpenMV Cam's internal flash drive. These two steps only need to be done once.*
 
 ### Optional Step 1 - Building the Arduino based Servo Controller:
 
