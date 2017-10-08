@@ -25,7 +25,7 @@ Micro USB Cable<br />![Micro USB Cable](images/parts/uusb.jpg "Micro USB Cable")
 
 **Sub-Total $339.90** - However, if you can 3D print parts it's significantly cheaper to build the robocar. You may also have some of the above parts lying around (like the Micro USB cable).
 
-While the above parts list is all you need you may wish to instead control your robocar's servos using the below parts for an arduino based servo controller board which will allow you to control your robot remotely using the RC transmitter that comes with the magnet car. You don't need the servo shield above if you build your car using the below components.
+While the above parts list is all you need you may wish to instead control your robocar's servos using the below parts for an arduino based servo controller board which will allow you to control your robot remotely using the RC transmitter that comes with the magnet car. You don't need the servo shield above if you build your car using the below components. **I HEAVILY RECOMMEND THAT YOU BUY THE PARTS FOR THE ARDUINO SERVO SHIELD SO THAT YOU CAN CONTROL YOUR ROBOCAR THROTTLE REMOTELY. YOU WILL LIKELY IMMEDIATELY DAMAGE YOUR ROBOCAR WITHOUT IT BY ACCIDENTALLY DRIVING INTO A WALL!**
 
 Part Description | Part Link | Part Count | Part Cost
 ---------------- | --------- | ---------- | ---------
