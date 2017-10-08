@@ -40,6 +40,9 @@ STEERING_I_MIN = -0.0
 STEERING_I_MAX = 0.0
 STEERING_D_GAIN = 0.1
 
+# Selects servo controller module...
+ARDUINO_SERVO_CONTROLLER_ATTACHED = True
+
 # Tweak these values for your robocar.
 THROTTLE_SERVO_MIN_US = 1500
 THROTTLE_SERVO_MAX_US = 2000
@@ -162,14 +165,25 @@ def figure_out_my_throttle(steering): # steering -> [0:180]
 # Servo Control Code
 #
 
-uart = pyb.UART(3, 19200, timeout_char = 1000)
+device = None
+
+if ARDUINO_SERVO_CONTROLLER_ATTACHED:
+    device = pyb.UART(3, 19200, timeout_char = 1000)
+else:
+    import servo
+    import machine
+    device = servo.Servos(machine.I2C(sda = machine.Pin("P5"), scl = machine.Pin("P4")), address = 0x40, freq = 50)
 
 # throttle [0:100] (101 values) -> [THROTTLE_SERVO_MIN_US, THROTTLE_SERVO_MAX_US]
 # steering [0:180] (181 values) -> [STEERING_SERVO_MIN_US, STEERING_SERVO_MAX_US]
 def set_servos(throttle, steering):
     throttle = THROTTLE_SERVO_MIN_US + ((throttle * (THROTTLE_SERVO_MAX_US - THROTTLE_SERVO_MIN_US + 1)) / 101)
     steering = STEERING_SERVO_MIN_US + ((steering * (STEERING_SERVO_MAX_US - STEERING_SERVO_MIN_US + 1)) / 181)
-    uart.write("{%05d,%05d}\r\n" % (throttle, steering))
+    if ARDUINO_SERVO_CONTROLLER_ATTACHED:
+        device.write("{%05d,%05d}\r\n" % (throttle, steering))
+    else:
+        device.position(0, us=throttle)
+        device.position(1, us=steering)
 
 #
 # Camera Control Code
