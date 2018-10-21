@@ -9,11 +9,11 @@ import sensor, image, time, math, pyb
 ###########
 
 COLOR_LINE_FOLLOWING = True # False to use grayscale thresholds, true to use color thresholds.
-COLOR_THRESHOLDS = [( 85, 100,  -40,  -10,    0,  127)] # Yellow Line.
+COLOR_THRESHOLDS = [( 94, 100,  -27,    1,   20,  127)] # Yellow Line.
 GRAYSCALE_THRESHOLDS = [(240, 255)] # White Line.
 COLOR_HIGH_LIGHT_THRESHOLDS = [(80, 100, -10, 10, -10, 10)]
 GRAYSCALE_HIGH_LIGHT_THRESHOLDS = [(250, 255)]
-BINARY_VIEW = False # Helps debugging but costs FPS if on.
+BINARY_VIEW = True # Helps debugging but costs FPS if on.
 DO_NOTHING = False # Just capture frames...
 FRAME_SIZE = sensor.QQVGA # Frame size.
 FRAME_REGION = 0.75 # Percentage of the image from the bottom (0 - 1.0).
@@ -28,7 +28,7 @@ MIXING_RATE = 0.9 # Percentage of a new line detection to mix into current steer
 THROTTLE_CUT_OFF_ANGLE = 1.0 # Maximum angular distance from 90 before we cut speed [0.0-90.0).
 THROTTLE_CUT_OFF_RATE = 0.5 # How much to cut our speed boost (below) once the above is passed (0.0-1.0].
 THROTTLE_GAIN = 0.0 # e.g. how much to speed up on a straight away
-THROTTLE_OFFSET = 24.0 # e.g. default speed (0 to 100)
+THROTTLE_OFFSET = 30.0 # e.g. default speed (0 to 100)
 THROTTLE_P_GAIN = 1.0
 THROTTLE_I_GAIN = 0.0
 THROTTLE_I_MIN = -0.0
@@ -37,11 +37,11 @@ THROTTLE_D_GAIN = 0.0
 
 # Tweak these values for your robocar.
 STEERING_OFFSET = 90 # Change this if you need to fix an imbalance in your car (0 to 180).
-STEERING_P_GAIN = -40.0 # Make this smaller as you increase your speed and vice versa.
+STEERING_P_GAIN = -15.0 # Make this smaller as you increase your speed and vice versa.
 STEERING_I_GAIN = 0.0
 STEERING_I_MIN = -0.0
 STEERING_I_MAX = 0.0
-STEERING_D_GAIN = -9 # Make this larger as you increase your speed and vice versa.
+STEERING_D_GAIN = -12 # Make this larger as you increase your speed and vice versa.
 
 # Selects servo controller module...
 ARDUINO_SERVO_CONTROLLER_ATTACHED = True
@@ -157,6 +157,9 @@ sensor.skip_frames(time = 200)
 if COLOR_LINE_FOLLOWING: sensor.set_auto_gain(False)
 if COLOR_LINE_FOLLOWING: sensor.set_auto_whitebal(False)
 clock = time.clock()
+#sensor.set_auto_exposure(False, \
+#    exposure_us = 300)
+
 
 ###########
 # Loop
