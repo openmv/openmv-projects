@@ -1,5 +1,6 @@
 # This file is part of the OpenMV project.
 # Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Support for OpenMV Motor Shield by Chris Anderson, DIY Robocars
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
 import sensor, image, time, math, pyb
@@ -46,9 +47,7 @@ STEERING_D_GAIN = -12 # Make this larger as you increase your speed and vice ver
 
 # Selects motor/servo controller method...
 ARDUINO_SERVO_CONTROLLER = False
-
 NATIVE_SERVO_CONTROLLER = True
-
 NATIVE_MOTOR_CONTROLLER = False
 
 # Tweak these values for your robocar if you're using servos.
@@ -107,14 +106,6 @@ if NATIVE_MOTOR_CONTROLLER:
     # If they are not equal then the motor will spin one way other the
     # other depending on its hookup and the value of channel 0.
 
-    pinADir0.value(1)
-    pinADir1.value(0)
-
-    # Dir0/1 must be not equal to each other for forward or backwards
-    # operation. If they are equal then that's a brake operation.
-    # If they are not equal then the motor will spin one way other the
-    # other depending on its hookup and the value of channel 0.
-
     pinBDir0.value(0)
     pinBDir1.value(1)
 
@@ -123,7 +114,7 @@ if NATIVE_MOTOR_CONTROLLER:
     ch2 = tim.channel(2, pyb.Timer.PWM, pin=pyb.Pin("P8"))
     cruise_speed = 50
     radians_degrees = 57.3 # constant to convert from radians to degrees
-    steering_direction = 1   # use this to revers the steering if your car goes in the wrong direction
+    steering_direction = 1   # use this to reverse the steering if your car goes in the wrong direction
     steering_gain = 1.0  # calibration for your car's steering sensitivity
     steering_center = 0  # set to your car's steering center point
 
