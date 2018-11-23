@@ -10,11 +10,11 @@ import sensor, image, time, math, pyb
 ###########
 
 COLOR_LINE_FOLLOWING = True # False to use grayscale thresholds, true to use color thresholds.
-COLOR_THRESHOLDS = [(0, 100, -117, -15, -26, 127)] # Green Line.
+COLOR_THRESHOLDS = [( 94, 100,  -27,    1,   20,  127)] # Yellow Line.
 GRAYSCALE_THRESHOLDS = [(240, 255)] # White Line.
 COLOR_HIGH_LIGHT_THRESHOLDS = [(80, 100, -10, 10, -10, 10)]
 GRAYSCALE_HIGH_LIGHT_THRESHOLDS = [(250, 255)]
-BINARY_VIEW = False # Helps debugging but costs FPS if on.
+BINARY_VIEW = True # Helps debugging but costs FPS if on.
 DO_NOTHING = False # Just capture frames...
 FRAME_SIZE = sensor.QQVGA # Frame size.
 FRAME_REGION = 0.75 # Percentage of the image from the bottom (0 - 1.0).
@@ -47,9 +47,9 @@ STEERING_D_GAIN = -12 # Make this larger as you increase your speed and vice ver
 # Selects motor/servo controller method...
 ARDUINO_SERVO_CONTROLLER = False
 
-NATIVE_SERVO_CONTROLLER = False
+NATIVE_SERVO_CONTROLLER = True
 
-NATIVE_MOTOR_CONTROLLER = True
+NATIVE_MOTOR_CONTROLLER = False
 
 # Tweak these values for your robocar if you're using servos.
 THROTTLE_SERVO_MIN_US = 1500
@@ -95,13 +95,36 @@ if NATIVE_SERVO_CONTROLLER:
 
 if NATIVE_MOTOR_CONTROLLER:
     from pyb import Pin, Timer
+
+    # these are motor driver pins, which set the direction of each motor
+    pinADir0 = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinADir1 = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinBDir0 = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinBDir1 = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+
+    # Dir0/1 must be not equal to each other for forward or backwards
+    # operation. If they are equal then that's a brake operation.
+    # If they are not equal then the motor will spin one way other the
+    # other depending on its hookup and the value of channel 0.
+
+    pinADir0.value(1)
+    pinADir1.value(0)
+
+    # Dir0/1 must be not equal to each other for forward or backwards
+    # operation. If they are equal then that's a brake operation.
+    # If they are not equal then the motor will spin one way other the
+    # other depending on its hookup and the value of channel 0.
+
+    pinBDir0.value(0)
+    pinBDir1.value(1)
+
     tim = Timer(4, freq=1000) # Frequency in Hz
-    ch1 = tim.channel(1, Timer.PWM, pin=Pin("P7"), pulse_width_percent=0)
-    ch2 = tim.channel(2, Timer.PWM, pin=Pin("P8"), pulse_width_percent=0)
+    ch1 = tim.channel(1, pyb.Timer.PWM, pin=pyb.Pin("P7"))
+    ch2 = tim.channel(2, pyb.Timer.PWM, pin=pyb.Pin("P8"))
     cruise_speed = 50
     radians_degrees = 57.3 # constant to convert from radians to degrees
     steering_direction = 1   # use this to revers the steering if your car goes in the wrong direction
-    steering_gain = 5.0  # calibration for your car's steering sensitivity
+    steering_gain = 1.0  # calibration for your car's steering sensitivity
     steering_center = 0  # set to your car's steering center point
 
 def constrain(value, min, max):
@@ -114,7 +137,6 @@ def constrain(value, min, max):
 
 def steer(throttle, angle):
     global steering_gain, cruise_speed, steering_center
-    print ("Initial angle", angle, "Initial throttle", throttle)
     angle = int(round(angle+steering_center))
     angle = constrain(angle, 0, 180)
     angle = angle - 90
