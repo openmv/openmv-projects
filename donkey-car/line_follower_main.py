@@ -1,8 +1,10 @@
 # This file is part of the OpenMV project.
 # Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+# Support for OpenMV Motor Shield by Chris Anderson, DIY Robocars
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
 import sensor, image, time, math, pyb
+
 
 ###########
 # Settings
@@ -13,7 +15,7 @@ COLOR_THRESHOLDS = [( 94, 100,  -27,    1,   20,  127)] # Yellow Line.
 GRAYSCALE_THRESHOLDS = [(240, 255)] # White Line.
 COLOR_HIGH_LIGHT_THRESHOLDS = [(80, 100, -10, 10, -10, 10)]
 GRAYSCALE_HIGH_LIGHT_THRESHOLDS = [(250, 255)]
-BINARY_VIEW = True # Helps debugging but costs FPS if on.
+BINARY_VIEW = False # Helps debugging but costs FPS if on.
 DO_NOTHING = False # Just capture frames...
 FRAME_SIZE = sensor.QQVGA # Frame size.
 FRAME_REGION = 0.75 # Percentage of the image from the bottom (0 - 1.0).
@@ -43,10 +45,12 @@ STEERING_I_MIN = -0.0
 STEERING_I_MAX = 0.0
 STEERING_D_GAIN = -12 # Make this larger as you increase your speed and vice versa.
 
-# Selects servo controller module...
-ARDUINO_SERVO_CONTROLLER_ATTACHED = True
+# Selects motor/servo controller method...
+ARDUINO_SERVO_CONTROLLER = False
+NATIVE_SERVO_CONTROLLER = True
+NATIVE_MOTOR_CONTROLLER = False
 
-# Tweak these values for your robocar.
+# Tweak these values for your robocar if you're using servos.
 THROTTLE_SERVO_MIN_US = 1500
 THROTTLE_SERVO_MAX_US = 2000
 
@@ -77,6 +81,69 @@ THROTTLE_SERVO_MAX_US = tmp
 tmp = max(STEERING_SERVO_MIN_US, STEERING_SERVO_MAX_US)
 STEERING_SERVO_MIN_US = min(STEERING_SERVO_MIN_US, STEERING_SERVO_MAX_US)
 STEERING_SERVO_MAX_US = tmp
+
+device = None
+
+if ARDUINO_SERVO_CONTROLLER:
+    device = pyb.UART(3, 19200, timeout_char = 1000)
+
+if NATIVE_SERVO_CONTROLLER:
+    import servo
+    import machine
+    device = servo.Servos(machine.I2C(sda = machine.Pin("P5"), scl = machine.Pin("P4")), address = 0x40, freq = 50)
+
+if NATIVE_MOTOR_CONTROLLER:
+    from pyb import Pin, Timer
+
+    # these are motor driver pins, which set the direction of each motor
+    pinADir0 = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinADir1 = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinBDir0 = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+    pinBDir1 = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+
+    # Dir0/1 must be not equal to each other for forward or backwards
+    # operation. If they are equal then that's a brake operation.
+    # If they are not equal then the motor will spin one way other the
+    # other depending on its hookup and the value of channel 0.
+
+    pinBDir0.value(0)
+    pinBDir1.value(1)
+
+    tim = Timer(4, freq=1000) # Frequency in Hz
+    ch1 = tim.channel(1, pyb.Timer.PWM, pin=pyb.Pin("P7"))
+    ch2 = tim.channel(2, pyb.Timer.PWM, pin=pyb.Pin("P8"))
+    cruise_speed = 50
+    radians_degrees = 57.3 # constant to convert from radians to degrees
+    steering_direction = 1   # use this to reverse the steering if your car goes in the wrong direction
+    steering_gain = 1.0  # calibration for your car's steering sensitivity
+    steering_center = 0  # set to your car's steering center point
+
+def constrain(value, min, max):
+    if value < min :
+        return min
+    if value > max :
+        return max
+    else:
+        return value
+
+def steer(throttle, angle):
+    global steering_gain, cruise_speed, steering_center
+    angle = int(round(angle+steering_center))
+    angle = constrain(angle, 0, 180)
+    angle = angle - 90
+    angle = radians_degrees * math.tan(angle/radians_degrees) # take the tangent to create a non-linear response curver
+    angle = angle * steering_gain
+    print ("Calculated angle", angle)
+    left = angle*steering_direction + throttle + cruise_speed
+    left = constrain (left, 0, 100)
+    right = -1*angle*steering_direction + throttle + cruise_speed
+    right = constrain (right, 0, 100)
+    print ("left: ", left)
+    print ("right: ", right)
+    # Generate a 1KHz square wave on TIM4 with each channel
+    ch1.pulse_width_percent(left)
+    ch2.pulse_width_percent(right)
+
 
 # This function maps the output of the linear regression function to a driving vector for steering
 # the robocar. See https://openmv.io/blogs/news/linear-regression-line-following for more info.
@@ -122,23 +189,20 @@ def figure_out_my_throttle(steering): # steering -> [0:180]
 # Servo Control Code
 #
 
-device = None
 
-if ARDUINO_SERVO_CONTROLLER_ATTACHED:
-    device = pyb.UART(3, 19200, timeout_char = 1000)
-else:
-    import servo
-    import machine
-    device = servo.Servos(machine.I2C(sda = machine.Pin("P5"), scl = machine.Pin("P4")), address = 0x40, freq = 50)
 
 # throttle [0:100] (101 values) -> [THROTTLE_SERVO_MIN_US, THROTTLE_SERVO_MAX_US]
 # steering [0:180] (181 values) -> [STEERING_SERVO_MIN_US, STEERING_SERVO_MAX_US]
 def set_servos(throttle, steering):
-    throttle = THROTTLE_SERVO_MIN_US + ((throttle * (THROTTLE_SERVO_MAX_US - THROTTLE_SERVO_MIN_US + 1)) / 101)
-    steering = STEERING_SERVO_MIN_US + ((steering * (STEERING_SERVO_MAX_US - STEERING_SERVO_MIN_US + 1)) / 181)
-    if ARDUINO_SERVO_CONTROLLER_ATTACHED:
+    if NATIVE_MOTOR_CONTROLLER:
+        steer(throttle, steering)
+    if ARDUINO_SERVO_CONTROLLER:
+        throttle = THROTTLE_SERVO_MIN_US + ((throttle * (THROTTLE_SERVO_MAX_US - THROTTLE_SERVO_MIN_US + 1)) / 101)
+        steering = STEERING_SERVO_MIN_US + ((steering * (STEERING_SERVO_MAX_US - STEERING_SERVO_MIN_US + 1)) / 181)
         device.write("{%05d,%05d}\r\n" % (throttle, steering))
-    else:
+    if NATIVE_SERVO_CONTROLLER:
+        throttle = THROTTLE_SERVO_MIN_US + ((throttle * (THROTTLE_SERVO_MAX_US - THROTTLE_SERVO_MIN_US + 1)) / 101)
+        steering = STEERING_SERVO_MIN_US + ((steering * (STEERING_SERVO_MAX_US - STEERING_SERVO_MIN_US + 1)) / 181)
         device.position(0, us=throttle)
         device.position(1, us=steering)
 
