@@ -22,4 +22,10 @@ The script works for Windows, Mac, and Linux.
 
 After running that command you should see an output like so:
 
-[Event Streaming](event-streaming.mp4)
+[Event Streaming Video](event-streaming.mp4)
+
+## Details
+
+More details on how the script works and thoughts.
+
+[Explainer Video](Explainer.mp4)
