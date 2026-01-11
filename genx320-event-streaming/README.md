@@ -28,4 +28,4 @@ After running that command you should see an output like so:
 
 More details on how the script works and thoughts.
 
-[Explainer Video](Explainer.mp4)
+[Explainer Video](explainer.mp4)
