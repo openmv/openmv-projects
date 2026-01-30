@@ -1,6 +1,6 @@
 # GENX320 Event Streaming
 
-This project shows off how to stream events from your OpenMV Cam to the PC with a GENX320 event sensor.
+This project shows off how to get the raw bayer image from your OpenMV Cam to the PC.
 
 ## Setup
 
@@ -10,22 +10,12 @@ This project shows off how to stream events from your OpenMV Cam to the PC with 
 
 ## Usage
 
-Now that you have everything installed, you can stream events from your OpenMV Cam with the GENX320 camera sensor to the PC. Just do:
+Now that you have everything installed, get the raw bayer image from your OpenMV Cam. Just do:
 
 ```
-python3 -u genx320_event_mode_streaming_on_pc.py --port=/dev/ttyACM0 --script=genx320_event_mode_streaming_on_cam.py
+python3 -u ccm_tuning_on_pc.py --port=/dev/ttyACM0 --script=ccm_tuning_on_cam.py
 ```
 
 _Assuming the camera is on `/dev/ttyACM0` COM port on linux_
 
 The script works for Windows, Mac, and Linux.
-
-After running that command you should see an output like so:
-
-[Event Streaming Video](event-streaming.mp4)
-
-## Details
-
-More details on how the script works and thoughts.
-
-[Explainer Video](explainer.mp4)
