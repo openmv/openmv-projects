@@ -126,11 +126,47 @@ def main():
                         type=float, default=0.0,
                         help='Packet drop simulation rate (0.0-1.0, default: 0.0)')
 
+    parser.add_argument('--ccm',
+                        type=str, default=None,
+                        help='Color correction matrix as 9 comma-separated floats '
+                             '(row-major 3x3), e.g. "1.5,-0.3,-0.2,-0.2,1.4,-0.2,-0.1,-0.3,1.4"')
+
+    parser.add_argument('--ccm-offsets',
+                        type=str, default=None,
+                        help='Per-channel R,G,B offsets added after CCM, '
+                             'e.g. "-10,5,15"')
+
     parser.add_argument('--quiet',
                         action='store_true',
                         help='Suppress script output text')
 
     args = parser.parse_args()
+
+    # Parse CCM if provided
+    ccm_matrix = None
+    if args.ccm:
+        try:
+            values = [float(v.strip()) for v in args.ccm.split(',')]
+            if len(values) != 9:
+                parser.error(f"CCM requires exactly 9 values, got {len(values)}")
+            ccm_matrix = np.array(values, dtype=np.float32).reshape(3, 3)
+            logging.info(f"Color correction matrix:\n{ccm_matrix}")
+        except ValueError as e:
+            parser.error(f"Invalid CCM values: {e}")
+
+    # Parse CCM offsets if provided
+    ccm_offsets = None
+    if args.ccm_offsets:
+        try:
+            offset_values = [float(v.strip()) for v in args.ccm_offsets.split(',')]
+            if len(offset_values) != 3:
+                parser.error(f"CCM offsets requires exactly 3 values (R,G,B), got {len(offset_values)}")
+            ccm_offsets = np.array(offset_values, dtype=np.float32)
+            logging.info(f"CCM offsets (R,G,B): {ccm_offsets}")
+        except ValueError as e:
+            parser.error(f"Invalid CCM offset values: {e}")
+
+    ccm_enabled = ccm_matrix is not None
 
     # Register signal handlers for clean exit
     signal.signal(signal.SIGINT, signal_handler)
@@ -161,7 +197,10 @@ def main():
     screen = None
     clock = pygame.time.Clock()
 
-    pygame.display.set_caption("OpenMV Camera")
+    if ccm_matrix is not None:
+        pygame.display.set_caption("OpenMV Camera - CCM ON")
+    else:
+        pygame.display.set_caption("OpenMV Camera")
 
     try:
         with Camera(args.port, baudrate=args.baudrate, crc=args.crc, seq=args.seq,
@@ -187,6 +226,11 @@ def main():
                         continue
                     if event.key == pygame.K_ESCAPE:
                         raise KeyboardInterrupt
+                    if event.key == pygame.K_c and ccm_matrix is not None:
+                        ccm_enabled = not ccm_enabled
+                        state = "ON" if ccm_enabled else "OFF"
+                        logging.info(f"CCM {state}")
+                        pygame.display.set_caption(f"OpenMV Camera - CCM {state}")
 
                 # Read camera status
                 status = camera.read_status()
@@ -231,7 +275,18 @@ def main():
                 bayer_raw = np.frombuffer(data, dtype=np.uint8).reshape(h, w)
 
                 # Debayer using the pattern from shape
-                rgb_data = cv2.cvtColor(bayer_raw, BAYER_PATTERNS[bayer_pattern]).tobytes()
+                rgb_image = cv2.cvtColor(bayer_raw, BAYER_PATTERNS[bayer_pattern])
+
+                # Apply color correction matrix if enabled
+                if ccm_enabled and ccm_matrix is not None:
+                    # Reshape to (N, 3), apply 3x3 matrix multiply, add offsets, reshape back
+                    pixels = rgb_image.reshape(-1, 3).astype(np.float32)
+                    corrected = pixels @ ccm_matrix.T
+                    if ccm_offsets is not None:
+                        corrected += ccm_offsets
+                    rgb_image = np.clip(corrected, 0, 255).astype(np.uint8).reshape(h, w, 3)
+
+                rgb_data = rgb_image.tobytes()
 
                 # Create pygame image from RGB data
                 image = pygame.image.frombuffer(rgb_data, (w, h), 'RGB')
