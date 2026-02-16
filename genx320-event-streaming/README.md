@@ -10,15 +10,26 @@ This project shows off how to stream events from your OpenMV Cam to the PC with 
 
 ## Usage
 
-Now that you have everything installed, you can stream events from your OpenMV Cam with the GENX320 camera sensor to the PC. Just do:
+Now that you have everything installed, you can stream events from your OpenMV Cam with the GENX320 camera sensor to the PC. 
+
+If you wish to stream the unpacked event arrays, run the scripts below:
 
 ```
 python3 -u genx320_event_mode_streaming_on_pc.py --port=/dev/ttyACM0 --script=genx320_event_mode_streaming_on_cam.py
 ```
 
+If you wish to instead stream the events in EVT2.0 format as 32-bit words from the GENX320, run these scripts instead:
+
+```
+python3 -u genx320_event_mode_streaming_on_pc_raw.py --port=/dev/ttyACM0 --script=genx320_event_mode_streaming_on_cam_raw.py
+```
+
 _Assuming the camera is on `/dev/ttyACM0` COM port on linux_
 
-The script works for Windows, Mac, and Linux.
+Unlike the unpacked event arrays, streaming events as 32-bit words will allow you to achieve a much higher data-rate. 
+However, you will have to parse the EVT2.0 format on the PC-side.  
+
+The scripts work for Windows, Mac, and Linux.
 
 After running that command you should see an output like so:
 
