@@ -1,2 +1,6 @@
 # Claude session folder
 .claude/
+
+# CCM tuner generated output files
+ccm_frame_*.bmp
+ccm_params_*.txt
