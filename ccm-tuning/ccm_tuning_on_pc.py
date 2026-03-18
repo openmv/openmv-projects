@@ -46,15 +46,15 @@ BAYER_PATTERNS = {
 
 # For each bayer pattern ID, the (row, col) offset within the 2x2 block for R and B.
 # G occupies the other two positions: (r_row, b_col) and (b_row, r_col).
-#   Pattern 0 (Camera BGGR → OpenCV RGGB): R at [0,0], B at [1,1]
-#   Pattern 1 (Camera GBRG → OpenCV GRBG): R at [0,1], B at [1,0]
-#   Pattern 2 (Camera GRBG → OpenCV GBRG): R at [1,0], B at [0,1]
-#   Pattern 3 (Camera RGGB → OpenCV BGGR): R at [1,1], B at [0,0]
+#   Pattern 0 (Camera BGGR → OpenCV RGGB): B G / G R → R at [1,1], B at [0,0]
+#   Pattern 1 (Camera GBRG → OpenCV GRBG): G B / R G → R at [1,0], B at [0,1]
+#   Pattern 2 (Camera GRBG → OpenCV GBRG): G R / B G → R at [0,1], B at [1,0]
+#   Pattern 3 (Camera RGGB → OpenCV BGGR): R G / G B → R at [0,0], B at [1,1]
 BAYER_CHANNEL_POS = {
-    0: ((0, 0), (1, 1)),
-    1: ((0, 1), (1, 0)),
-    2: ((1, 0), (0, 1)),
-    3: ((1, 1), (0, 0)),
+    0: ((1, 1), (0, 0)),
+    1: ((1, 0), (0, 1)),
+    2: ((0, 1), (1, 0)),
+    3: ((0, 0), (1, 1)),
 }
 
 CTRL_WIDTH  = 340
@@ -99,9 +99,10 @@ def bayer_channel_stats(bayer_raw, bayer_pattern):
 
 def compute_awb(avg_r, avg_g, avg_b):
     """
-    Compute AWB gains and luminance following the N6 ISP algorithm.
+    Compute AWB gains and luminance matching the N6 ISP algorithm.
     Luminance: L = R*0.299 + G*0.587 + B*0.114
-    Per-channel gain: gain_i = L / avg_i
+    Per-channel gain: gain_i = L / max(avg_i, 1)
+    Matches stm_isp_update_awb: multi = round(L * 128 / avg), effective gain = L / avg.
     Returns: (gain_r, gain_g, gain_b), luminance
     """
     luminance = avg_r * 0.299 + avg_g * 0.587 + avg_b * 0.114
