@@ -10,7 +10,7 @@ On macOS and Linux the companion script's `read` method is automatically renamed
 
 ## Prerequisites
 
-1. **OpenMV IDE** v4.8.4 or later.
+1. **OpenMV IDE** v4.8.8 or later.
 2. **OpenMV Cam Firmware** v5.0.0 or later. Update via `Tools → Install Latest Development Release` in the IDE.
 3. **Python dependencies:**
 
