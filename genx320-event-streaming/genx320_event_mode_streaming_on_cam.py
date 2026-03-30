@@ -68,7 +68,7 @@ class EventChannel:
             return event_counts[rd_index] * 12
         return 0
 
-    def readp(self, offset, size):
+    def read(self, offset, size):
         global rd_index
 
         if read_available():
