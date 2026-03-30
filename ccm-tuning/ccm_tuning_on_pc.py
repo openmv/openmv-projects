@@ -217,6 +217,9 @@ def camera_worker(args, state_lock, state, frame_q, stop_evt):
 
             with open(args.script) as f:
                 script = f.read()
+            if sys.platform != 'win32':
+                script = script.replace('def read(self, offset, size):',
+                                        'def readp(self, offset, size):')
             camera.exec(script)
             logging.info("Script running, streaming frames...")
 
@@ -623,6 +626,14 @@ def main():
                 # ── Right: control panel ───────────────────────────────────
                 with dpg.table_cell():
                     with dpg.child_window(width=CTRL_WIDTH, border=False):
+
+                        # ── Windows performance warning ─────────────────────
+                        if sys.platform == 'win32':
+                            dpg.add_text(
+                                "Warning: Windows reduces transfer speed.\n"
+                                "Use macOS or Linux for best performance.",
+                                color=(255, 200, 0, 255))
+                            dpg.add_separator()
 
                         # ── Connection ─────────────────────────────────────
                         with dpg.group():

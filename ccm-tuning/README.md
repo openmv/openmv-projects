@@ -2,6 +2,14 @@
 
 A PC-side GUI tool for tuning the Color Correction Matrix (CCM) and related ISP parameters for the OpenMV N6 camera. It streams raw Bayer frames from the camera over USB serial, applies a software replica of the N6 ISP pipeline in real time, and displays the corrected image alongside live statistics.
 
+![CCM Tuning GUI](ccm-tuning.jpg)
+
+## Platform Notes
+
+macOS and Linux are recommended for the best GUI performance and frame throughput. On Windows, DearPyGui rendering can be noticeably slower, which may reduce the effective frame rate. The camera script and serial protocol work on all platforms, but if you experience a sluggish UI or low frame rate, consider switching to a Mac or Linux machine.
+
+On macOS and Linux the companion script's `read` method is automatically renamed to `readp` before execution (this is handled transparently by the PC script).
+
 ## ISP Pipeline
 
 The tool mimics the N6 ISP pipeline in this order:
@@ -135,7 +143,7 @@ CCM    R:   1.479   -0.449   -0.030
 
 ## Notes
 
-- The tool works on Windows, macOS, and Linux.
+- The tool works on Windows, macOS, and Linux. See **Platform Notes** above for performance guidance.
 - The CCM solver uses the pre-CCM (post-AWB) image so that the solved matrix corrects sensor metamerism independently of the white balance.
 - CCM rows are normalized to sum to 1 after solving, enforcing the achromatic constraint (neutral surfaces stay neutral).
 - Clicking the image while **Pick ColorChecker** is active places corner markers. Clicking **Reset** at any point clears all corners and the overlay.

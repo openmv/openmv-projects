@@ -868,6 +868,14 @@ def main():
                 with dpg.table_cell():
                     with dpg.child_window(width=CTRL_WIDTH, border=False):
 
+                        # ── Windows performance warning ──────────────────────
+                        if sys.platform == 'win32':
+                            dpg.add_text(
+                                "Warning: Windows reduces transfer speed.\n"
+                                "Use macOS or Linux for best performance.",
+                                color=(255, 200, 0, 255))
+                            dpg.add_separator()
+
                         # ── Connection ──────────────────────────────────────
                         with dpg.group():
                             with dpg.group(horizontal=True):
