@@ -614,6 +614,12 @@ def main():
 
     def do_connect(port):
         args.port        = port
+        # Reset frequency filter state so the new session starts clean
+        fc_L2[:] = 0.0;  fc_L1[:] = 0.0;  fc_p1[:] = -1.0
+        fc_t_ud[:] = 0.0; fc_t_du[:] = 0.0
+        fc_per[:] = -1.0
+        fc_t_now[0] = 0.0
+        last_freq_rgba[0] = None
         stop_evt         = threading.Event()
         conn['stop_evt'] = stop_evt
         t = threading.Thread(
