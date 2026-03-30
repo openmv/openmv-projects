@@ -67,7 +67,7 @@ class BayerChannel:
             if end == img_size:
                 frame_available = False
             return mv
-        return bytes(size) 
+        return bytes(size)
 
     def poll(self):
         return frame_available
