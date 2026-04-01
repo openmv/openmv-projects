@@ -333,7 +333,8 @@ def parse_args():
                         '(defaults to ccm_tuning_on_cam.py next to this file)')
     p.add_argument('--baudrate',    type=int, default=921600)
     p.add_argument('--timeout',     type=float, default=1.0)
-    p.add_argument('--crc',         type=str2bool, nargs='?', const=True, default=True)
+    p.add_argument('--crc',         type=str2bool, nargs='?', const=True,
+                   default=(sys.platform == 'win32'))
     p.add_argument('--seq',         type=str2bool, nargs='?', const=True, default=True)
     p.add_argument('--ack',         type=str2bool, nargs='?', const=True, default=False)
     p.add_argument('--events',      type=str2bool, nargs='?', const=True, default=True)
@@ -343,16 +344,115 @@ def parse_args():
     p.add_argument('--quiet',       action='store_true',
                    help='Suppress camera stdout')
     p.add_argument('--debug',       action='store_true')
+    p.add_argument('--benchmark',   action='store_true',
+                   help='Headless mode: print frame rate and bandwidth stats, no GUI')
 
     return p.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Benchmark (headless)
+# ---------------------------------------------------------------------------
+
+EMA_ALPHA = 0.2
+
+def run_benchmark(args):
+    """Headless benchmark: camera thread only, frame rate and bandwidth printed to terminal."""
+    if not args.port:
+        ports = [p.device for p in serial.tools.list_ports.comports()]
+        if not ports:
+            print("No serial ports found. Use --port to specify one.")
+            sys.exit(1)
+        args.port = ports[0]
+        print(f"Auto-selected port: {args.port}")
+
+    if args.script is None:
+        args.script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   'ccm_tuning_on_cam.py')
+
+    stop_evt = threading.Event()
+
+    def handle_exit(signum, frame):
+        stop_evt.set()
+
+    signal.signal(signal.SIGINT,  handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+
+    frame_q = queue.Queue(maxsize=4)
+    state_lock = threading.Lock()
+    state = {
+        'awb_auto':    True,
+        'awb_gains':   [1.0, 1.0, 1.0],
+        'black_level': [0, 0, 0],
+        'ccm_enabled': False,
+        'ccm':         np.eye(3, dtype=np.float32),
+        'ccm_offsets': [0.0, 0.0, 0.0],
+        'brightness':  0.0,
+        'contrast':    1.0,
+        'gamma':       1.0,
+    }
+
+    cam_t = threading.Thread(
+        target=camera_worker,
+        args=(args, state_lock, state, frame_q, stop_evt),
+        daemon=True,
+    )
+
+    print(f"Connecting to {args.port} ...")
+    cam_t.start()
+
+    total_frames  = 0
+    total_bytes   = 0
+    fps_ema       = 0.0
+    mbps_ema      = 0.0
+    last_time     = time.perf_counter()
+    start_time    = last_time
+    last_print    = last_time
+
+    while not stop_evt.is_set():
+        try:
+            w, h, _tex, _stats, _rgb, _pre = frame_q.get(timeout=0.05)
+        except queue.Empty:
+            if not cam_t.is_alive():
+                if not stop_evt.is_set():
+                    print("Camera thread died unexpectedly.")
+                break
+            continue
+
+        now       = time.perf_counter()
+        dt        = now - last_time
+        last_time = now
+        if dt <= 0.0:
+            continue
+
+        frame_bytes = w * h
+        fps_inst    = 1.0 / dt
+        mbps_inst   = frame_bytes / 1048576.0 / dt
+        fps_ema     = fps_inst  if fps_ema  == 0.0 else fps_ema  * (1 - EMA_ALPHA) + fps_inst  * EMA_ALPHA
+        mbps_ema    = mbps_inst if mbps_ema == 0.0 else mbps_ema * (1 - EMA_ALPHA) + mbps_inst * EMA_ALPHA
+        total_frames += 1
+        total_bytes  += frame_bytes
+
+        if now - last_print >= 0.1:
+            last_print = now
+            elapsed = now - start_time
+            print(f"elapsed={elapsed:.1f}s\t"
+                  f"fps={fps_ema:.1f}\t"
+                  f"bw={mbps_ema:.2f} MB/s\t"
+                  f"res={w}x{h}\t"
+                  f"total={total_frames:,} frames")
+
+    stop_evt.set()
+    print("\nDone.")
 
 
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
 
-def main():
-    args = parse_args()
+def main(args=None):
+    if args is None:
+        args = parse_args()
 
     if args.script is None:
         args.script = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -981,4 +1081,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _args = parse_args()
+    if _args.benchmark:
+        run_benchmark(_args)
+    else:
+        main(_args)
