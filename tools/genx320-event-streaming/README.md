@@ -2,6 +2,8 @@
 
 A PC-side GUI for streaming and visualizing events from a Prophesee GenX320 event camera sensor attached to an OpenMV Cam. Two real-time visualizations run side by side: an event accumulation canvas and a per-pixel frequency map.
 
+![GenX320 Event Streaming GUI](genx320-event-streaming.png)
+
 ## Platform Notes
 
 macOS and Linux are recommended for the best GUI performance and throughput. On Windows, DearPyGui rendering can be noticeably slower, which may reduce the effective event visualization frame rate at high event rates. The camera script and serial protocol work on all platforms, but if you experience sluggish UI or dropped frames, consider switching to a Mac or Linux machine.
