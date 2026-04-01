@@ -8,6 +8,8 @@ macOS and Linux are recommended for the best GUI performance and throughput. On 
 
 On macOS and Linux the companion script's `read` method is automatically renamed to `readp` before execution (this is handled transparently by the PC script).
 
+CRC is disabled by default on macOS and Linux for better USB throughput. It is enabled by default on Windows where it improves reliability. Override with `--crc`.
+
 ## Prerequisites
 
 1. **OpenMV IDE** v4.8.8 or later.
@@ -15,8 +17,10 @@ On macOS and Linux the companion script's `read` method is automatically renamed
 3. **Python dependencies:**
 
 ```
-pip install dearpygui numpy pyserial Pillow openmv
+pip install dearpygui numpy numba pyserial Pillow openmv
 ```
+
+Numba is required for the GIL-free IIR frequency camera update. On first run it JIT-compiles the inner loop (a few seconds); subsequent runs use the cached build.
 
 ## Running
 
@@ -31,12 +35,33 @@ The companion camera script (`genx320_event_mode_streaming_on_cam.py`) is loaded
 | `--port PORT` | *(GUI selector)* | Serial port to connect on |
 | `--script PATH` | `genx320_event_mode_streaming_on_cam.py` | MicroPython script to run on the camera |
 | `--baudrate N` | `921600` | Serial baud rate |
+| `--crc` | off (Linux/Mac), on (Windows) | Enable CRC on the serial protocol |
+| `--seq` | on | Enable sequence numbers |
+| `--ack` | off | Enable per-packet ACKs |
 | `--quiet` | off | Suppress camera stdout |
 | `--debug` | off | Enable verbose logging |
+| `--benchmark` | off | Headless throughput benchmark (no GUI) |
+
+## Benchmark Mode
+
+Run without the GUI to measure raw USB throughput:
+
+```
+python genx320_event_mode_streaming_on_pc.py --benchmark
+python genx320_event_mode_streaming_on_pc.py --benchmark --port /dev/ttyACM0
+```
+
+Prints at 10 Hz:
+
+```
+elapsed=3.2s    rate=1,243,500 ev/s    bw=8.94 MB/s    total=3,982,400
+```
+
+Press **Ctrl+C** to stop.
 
 ## GUI Overview
 
-The window has two panes: a **left image area** and a **right control panel**. The two images resize and reflow automatically — side by side when the window is wide, stacked when tall — to maximize how large they appear.
+The window has two panes: a **left image area** and a **right control panel**. The two images resize and reflow automatically — side by side when the window is wide, stacked when tall — to maximize how large they appear. When Frequency Visualization is disabled, the event canvas expands to fill the full image area.
 
 ### Connection
 
@@ -52,9 +77,7 @@ These patch the on-camera script before it is executed. They are locked while co
 |---------|---------|-------------|
 | CSI FIFO | 8 | Depth of the hardware CSI receive buffer |
 | EVT FIFO | 8 | Depth of the software event FIFO |
-| EVT Buffer | 8192 | Event array size (must be a power of two, 1024–65536) |
-
-On macOS and Linux the script's `read` method is automatically renamed to `readp` before execution.
+| EVT Buffer | 32768 | Event array size (must be a power of two, 1024–65536) |
 
 ### Event Visualization
 
@@ -72,7 +95,7 @@ The canvas is initialized to mid-gray (128). Each event adds `±contrast` to its
 
 #### Frequency Visualization
 
-Real-time per-pixel frequency map (right image) using a second-order IIR bandpass filter that reconstructs approximate brightness from the polarity event stream and measures the time between zero crossings.
+Real-time per-pixel frequency map (right image) using a second-order IIR bandpass filter that reconstructs approximate brightness from the polarity event stream and measures the time between zero crossings. Uncheck **Frequency Visualization** to hide the frequency image entirely and expand the event canvas — this also reduces CPU load and disables frequency image saving.
 
 Algorithm based on: [FrequencyCam — Imaging Periodic Signals in Real-Time](https://arxiv.org/abs/2211.00198)
 
@@ -92,11 +115,13 @@ Colors run blue (low frequency) → red (high frequency). Black pixels either ha
 
 ### Save Images and Events
 
-Saves the current state to disk:
+Saves the current state to disk. The button label reflects whether frequency visualization is enabled.
 
 - `events_<timestamp>_evt.png` — the event canvas rendered with the current color LUT.
-- `events_<timestamp>_freq.png` — the frequency image. If the legend is enabled it is composited onto the right side of the image.
+- `events_<timestamp>_freq.png` — the frequency image (only saved when Frequency Visualization is enabled). If the legend is enabled it is composited onto the right side of the image.
 - `events_<timestamp>.csv` — all raw events that built the current canvas (`polarity, sec, ms, us, x, y`).
+
+These files are excluded from git via `.gitignore`.
 
 ### Statistics
 
@@ -109,6 +134,18 @@ Live event throughput, updated at 5 Hz:
 | Bandwidth | EMA data rate (MB/s) |
 | Total events | Cumulative event count since connect |
 | Uptime | Seconds since connect |
+
+## Architecture
+
+The script uses a three-thread pipeline to keep USB throughput high while running the GUI:
+
+```
+camera_worker  →  raw_q  →  processing_worker  →  result_q  →  render loop
+```
+
+- **camera_worker** — reads raw event packets from the camera as fast as possible and drops them onto `raw_q`. Does no processing, never blocks on GUI.
+- **processing_worker** — pulls batches from `raw_q`, accumulates the canvas, and runs the per-pixel IIR frequency filter via a Numba-compiled `nogil` function so it does not block the camera thread.
+- **render loop** — drains `result_q`, uploads textures to DearPyGui, and updates the stats panel.
 
 ## Camera Script
 

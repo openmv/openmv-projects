@@ -10,6 +10,8 @@ macOS and Linux are recommended for the best GUI performance and frame throughpu
 
 On macOS and Linux the companion script's `read` method is automatically renamed to `readp` before execution (this is handled transparently by the PC script).
 
+CRC is disabled by default on macOS and Linux for better USB throughput. It is enabled by default on Windows where it improves reliability. Override with `--crc`.
+
 ## ISP Pipeline
 
 The tool mimics the N6 ISP pipeline in this order:
@@ -42,6 +44,30 @@ The companion camera script (`ccm_tuning_on_cam.py`, located in the same folder)
 |------|---------|-------------|
 | `--port PORT` | *(GUI selector)* | Serial port to connect on |
 | `--script PATH` | `ccm_tuning_on_cam.py` | MicroPython script to run on the camera |
+| `--baudrate N` | `921600` | Serial baud rate |
+| `--crc` | off (Linux/Mac), on (Windows) | Enable CRC on the serial protocol |
+| `--seq` | on | Enable sequence numbers |
+| `--ack` | off | Enable per-packet ACKs |
+| `--quiet` | off | Suppress camera stdout |
+| `--debug` | off | Enable verbose logging |
+| `--benchmark` | off | Headless throughput benchmark (no GUI) |
+
+## Benchmark Mode
+
+Run without the GUI to measure raw USB frame throughput:
+
+```
+python ccm_tuning_on_pc.py --benchmark
+python ccm_tuning_on_pc.py --benchmark --port /dev/ttyACM0
+```
+
+Prints at 10 Hz:
+
+```
+elapsed=4.1s    fps=12.3    bw=3.76 MB/s    res=640x480    total=50 frames
+```
+
+Press **Ctrl+C** to stop.
 
 ## GUI Overview
 
