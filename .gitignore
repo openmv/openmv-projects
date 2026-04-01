@@ -1,6 +1,14 @@
 # Claude session folder
 .claude/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # CCM tuner generated output files
 ccm_frame_*.bmp
 ccm_params_*.txt
+
+# GenX320 event streaming saved output files
+events_*.png
+events_*.csv

@@ -5,7 +5,7 @@
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
 # GenX320 event camera visualization GUI for PC.
-# Requires: pip install dearpygui numpy pyserial
+# Requires: pip install dearpygui numpy numba Pillow pyserial
 #
 # Two threads: camera_worker (receives events) and render loop (draws).
 # Canvas initialized to 128; events add contrast*polarity until clamping at 0/255.
@@ -22,6 +22,12 @@ import threading
 import queue
 from collections import deque
 import numpy as np
+import numba
+try:
+    from PIL import Image, ImageDraw
+    _PIL_AVAILABLE = True
+except ImportError:
+    _PIL_AVAILABLE = False
 import serial.tools.list_ports
 import dearpygui.dearpygui as dpg
 from openmv.camera import Camera
@@ -204,7 +210,6 @@ def _draw_freq_legend(tag, dh, min_freq, max_freq, use_log, n_bins):
 
 def _make_freq_legend_pil(height, min_freq, max_freq, use_log, n_bins):
     """Render the frequency colorbar legend as a PIL Image (height × LEGEND_DW)."""
-    from PIL import Image, ImageDraw
     img  = Image.new('RGB', (LEGEND_DW, height), color=(30, 30, 30))
     draw = ImageDraw.Draw(img)
     color_w = 16
@@ -283,6 +288,70 @@ def _freq_filter_coeffs(cutoff_period):
     c2 = -alpha * beta   # negative — used as L_k = c1·L1 + c2·L2 + c3·dp
     c3 =  0.5 * (1.0 + beta)
     return c1, c2, c3
+
+
+@numba.njit(nogil=True, cache=True)
+def _update_freq_cam(xs, ys, pols, ts_f,
+                     fc_L2, fc_L1, fc_p1,
+                     fc_t_ud, fc_t_du, fc_per,
+                     c1, c2, c3,
+                     fc_dt_min, fc_dt_max,
+                     fc_dt_min_half, fc_dt_max_half,
+                     fc_n_to):
+    """Per-event sequential IIR frequency camera update.
+
+    Compiled with nogil=True so the camera reader thread runs concurrently.
+    Returns the timestamp of the last processed event (or -1.0 if empty).
+    """
+    n = xs.shape[0]
+    if n == 0:
+        return -1.0
+    for i in range(n):
+        px = xs[i];  py = ys[i]
+        p  = pols[i] * 2.0 - 1.0
+        t  = ts_f[i]
+        l2 = fc_L2[py, px]
+        l1 = fc_L1[py, px]
+        dp = p - fc_p1[py, px]
+        l_new = c1 * l1 + c2 * l2 + c3 * dp
+        if not (abs(l_new) < 1e4):
+            l_new = 0.0
+            l1    = 0.0
+        fc_L2[py, px] = l1
+        fc_L1[py, px] = l_new
+        fc_p1[py, px] = p
+
+        if l1 > 0.0 and l_new < 0.0:
+            dt_ud = t - fc_t_ud[py, px]
+            dt_du = t - fc_t_du[py, px]
+            if fc_dt_min <= dt_ud <= fc_dt_max:
+                fc_per[py, px] = dt_ud
+            else:
+                cur = fc_per[py, px]
+                if cur > 0.0:
+                    if dt_ud > cur * fc_n_to and dt_du > 0.5 * cur * fc_n_to:
+                        fc_per[py, px] = 0.0
+                else:
+                    if fc_dt_min_half <= dt_du <= fc_dt_max_half:
+                        fc_per[py, px] = 2.0 * dt_du
+            fc_t_ud[py, px] = t
+
+        elif l1 < 0.0 and l_new > 0.0:
+            dt_du = t - fc_t_du[py, px]
+            dt_ud = t - fc_t_ud[py, px]
+            cur   = fc_per[py, px]
+            if fc_dt_min <= dt_du <= fc_dt_max and cur <= 0.0:
+                fc_per[py, px] = dt_du
+            else:
+                if cur > 0.0:
+                    if dt_du > cur * fc_n_to and dt_ud > 0.5 * cur * fc_n_to:
+                        fc_per[py, px] = 0.0
+                else:
+                    if fc_dt_min_half <= dt_ud <= fc_dt_max_half:
+                        fc_per[py, px] = 2.0 * dt_ud
+            fc_t_du[py, px] = t
+
+    return ts_f[n - 1]
 
 
 def _freq_to_texture(fc_per, fc_t_ud, fc_t_du, t_now, n_timeout, min_freq, max_freq,
@@ -474,6 +543,138 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
 
 
 # ---------------------------------------------------------------------------
+# Processing thread  (IIR freq-cam + canvas accumulation; GIL-free hot path)
+# ---------------------------------------------------------------------------
+
+def processing_worker(state_lock, state, raw_q, result_q, stop_evt,
+                      fc_L2, fc_L1, fc_p1, fc_t_ud, fc_t_du, fc_per,
+                      fc_coeffs_ref, fc_t_now, reset_evt):
+    """Pulls raw event batches, runs IIR filter (nogil) and canvas update, pushes results."""
+
+    canvas    = np.full((SENSOR_H, SENSOR_W), 128, dtype=np.int32)
+    slide_buf = deque()
+    event_buf = deque()
+    batch_counter = 0
+
+    while not stop_evt.is_set():
+        # Check for reset request from render thread
+        if reset_evt.is_set():
+            reset_evt.clear()
+            canvas[:] = 128
+            batch_counter = 0
+            slide_buf.clear()
+            event_buf.clear()
+            fc_L2[:] = 0.0;  fc_L1[:] = 0.0;  fc_p1[:] = -1.0
+            fc_t_ud[:] = 0.0; fc_t_du[:] = 0.0
+            fc_per[:] = -1.0
+            fc_t_now[0] = 0.0
+
+        try:
+            events, stats = raw_q.get(timeout=0.02)
+        except queue.Empty:
+            continue
+
+        xs   = events[:, 4].astype(np.int32)
+        ys   = events[:, 5].astype(np.int32)
+        pols = events[:, 0].astype(np.int32)
+
+        valid = (xs >= 0) & (xs < SENSOR_W) & (ys >= 0) & (ys < SENSOR_H)
+        xs, ys, pols = xs[valid], ys[valid], pols[valid]
+
+        batch_delta = None
+        if xs.size > 0:
+            signs    = pols * 2 - 1
+            flat_idx = ys * SENSOR_W + xs
+            pos = np.bincount(flat_idx[signs > 0], minlength=SENSOR_H * SENSOR_W)
+            neg = np.bincount(flat_idx[signs < 0], minlength=SENSOR_H * SENSOR_W)
+            batch_delta = (pos.astype(np.int32) - neg.astype(np.int32)).reshape(SENSOR_H, SENSOR_W)
+
+            with state_lock:
+                fc_enabled = state['fc_enabled']
+                fc_min  = state['fc_min_freq']
+                fc_max  = state['fc_max_freq']
+                fc_n_to = state['fc_n_timeout']
+
+            if fc_enabled:
+                ts_f = (events[valid, 1].astype(np.float64)
+                        + events[valid, 2].astype(np.float64) * 1e-3
+                        + events[valid, 3].astype(np.float64) * 1e-6)
+                c1, c2, c3 = fc_coeffs_ref[0], fc_coeffs_ref[1], fc_coeffs_ref[2]
+                fc_dt_min      = 1.0 / max(fc_max, 1e-9)
+                fc_dt_max      = 1.0 / max(fc_min, 1e-9)
+                fc_dt_min_half = 0.5 * fc_dt_min
+                fc_dt_max_half = 0.5 * fc_dt_max
+
+                # GIL-free compiled IIR update
+                t_last = _update_freq_cam(
+                    xs.astype(np.int32), ys.astype(np.int32),
+                    pols.astype(np.float64), ts_f,
+                    fc_L2, fc_L1, fc_p1,
+                    fc_t_ud, fc_t_du, fc_per,
+                    c1, c2, c3,
+                    fc_dt_min, fc_dt_max,
+                    fc_dt_min_half, fc_dt_max_half,
+                    float(fc_n_to),
+                )
+                if t_last >= 0.0:
+                    fc_t_now[0] = t_last
+
+        with state_lock:
+            contrast = state['contrast']
+            mode     = state['mode']
+            window   = state['window']
+            do_clear = state['clear']
+            if do_clear:
+                state['clear'] = False
+
+        if do_clear:
+            canvas[:] = 128
+            batch_counter = 0
+            slide_buf.clear()
+            event_buf.clear()
+
+        if mode == 'Canvas':
+            if window > 0 and batch_counter >= window:
+                canvas[:] = 128
+                batch_counter = 0
+                event_buf.clear()
+            batch_counter += 1
+            if batch_delta is not None:
+                canvas += batch_delta * contrast
+                np.clip(canvas, 0, 255, out=canvas)
+                event_buf.append(events)
+        else:  # Sliding Window
+            w = max(1, window)
+            if batch_delta is not None:
+                slide_buf.append(batch_delta)
+                event_buf.append(events)
+            while len(slide_buf) > w:
+                slide_buf.popleft()
+                event_buf.popleft()
+            canvas[:] = 128
+            for d in slide_buf:
+                canvas += d * contrast
+                np.clip(canvas, 0, 255, out=canvas)
+
+        # Only snapshot and enqueue a result if the render loop has room.
+        # This avoids three expensive 320×320 array copies on every batch
+        # when the render thread is already backed up.
+        if not result_q.full():
+            canvas_u8 = canvas.astype(np.uint8)
+            result = {
+                'canvas_u8':  canvas_u8,
+                'fc_enabled': fc_enabled,
+                'fc_per':     fc_per.copy() if fc_enabled else None,
+                'fc_t_ud':    fc_t_ud.copy() if fc_enabled else None,
+                'fc_t_du':    fc_t_du.copy() if fc_enabled else None,
+                'fc_t_now':   fc_t_now[0],
+                'event_buf':  list(event_buf),
+                'stats':      stats,
+            }
+            result_q.put(result)
+
+
+# ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
 
@@ -498,7 +699,8 @@ def parse_args():
                         '(defaults to genx320_event_mode_streaming_on_cam.py next to this file)')
     p.add_argument('--baudrate',    type=int,   default=921600)
     p.add_argument('--timeout',     type=float, default=1.0)
-    p.add_argument('--crc',         type=str2bool, nargs='?', const=True, default=True)
+    p.add_argument('--crc',         type=str2bool, nargs='?', const=True,
+                   default=(sys.platform == 'win32'))
     p.add_argument('--seq',         type=str2bool, nargs='?', const=True, default=True)
     p.add_argument('--ack',         type=str2bool, nargs='?', const=True, default=False)
     p.add_argument('--events',      type=str2bool, nargs='?', const=True, default=True)
@@ -508,6 +710,8 @@ def parse_args():
     p.add_argument('--quiet',       action='store_true',
                    help='Suppress camera stdout')
     p.add_argument('--debug',       action='store_true')
+    p.add_argument('--benchmark',   action='store_true',
+                   help='Headless mode: print throughput stats, no GUI')
     return p.parse_args()
 
 
@@ -515,8 +719,108 @@ def parse_args():
 # main  (render / GUI thread)
 # ---------------------------------------------------------------------------
 
-def main():
-    args = parse_args()
+def run_benchmark(args):
+    """Headless benchmark: camera + processing threads, stats printed to terminal."""
+    if not args.port:
+        ports = list_com_ports()
+        if not ports:
+            print("No serial ports found. Use --port to specify one.")
+            sys.exit(1)
+        args.port = ports[0]
+        print(f"Auto-selected port: {args.port}")
+
+    if args.script is None:
+        args.script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'genx320_event_mode_streaming_on_cam.py',
+        )
+
+    state_lock = threading.Lock()
+    state = {
+        'csi_fifo_depth': 8,
+        'evt_fifo_depth': 8,
+        'evt_res':        32768,
+        'contrast':       16,
+        'color_mode':     'Grayscale',
+        'mode':           'Sliding Window',
+        'window':         4,
+        'clear':          False,
+        'fc_cutoff_period': 5.0,
+        'fc_enabled':       True,
+        'fc_min_freq':      10.0,
+        'fc_max_freq':      1000.0,
+        'fc_n_timeout':     2,
+        'fc_log_freq':      True,
+        'fc_overlay':       False,
+        'fc_legend_show':   False,
+        'fc_legend_bins':   11,
+    }
+
+    fc_L2        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
+    fc_L1        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
+    fc_p1        = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float32)
+    fc_t_ud      = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
+    fc_t_du      = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
+    fc_per       = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float64)
+    fc_coeffs = list(_freq_filter_coeffs(state['fc_cutoff_period']))
+    fc_t_now  = [0.0]
+
+    raw_q    = queue.Queue(maxsize=8)
+    result_q = queue.Queue(maxsize=4)
+    reset_evt = threading.Event()
+    stop_evt  = threading.Event()
+
+    def handle_exit(signum, frame):
+        stop_evt.set()
+
+    signal.signal(signal.SIGINT,  handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+
+    cam_t = threading.Thread(
+        target=camera_worker,
+        args=(args, state_lock, state, raw_q, stop_evt),
+        daemon=True,
+    )
+    proc_t = threading.Thread(
+        target=processing_worker,
+        args=(state_lock, state, raw_q, result_q, stop_evt,
+              fc_L2, fc_L1, fc_p1, fc_t_ud, fc_t_du, fc_per,
+              fc_coeffs, fc_t_now, reset_evt),
+        daemon=True,
+    )
+
+    print(f"Connecting to {args.port} ...")
+
+    cam_t.start()
+    proc_t.start()
+
+    last_print = time.perf_counter()
+    while not stop_evt.is_set():
+        try:
+            result = result_q.get(timeout=0.05)
+        except queue.Empty:
+            if not cam_t.is_alive():
+                if not stop_evt.is_set():
+                    print("Camera thread died unexpectedly.")
+                break
+            continue
+
+        now = time.perf_counter()
+        if now - last_print >= 0.1:
+            last_print = now
+            s = result['stats']
+            print(f"elapsed={s['elapsed']:.1f}s\t"
+                  f"rate={s['event_rate']:,.0f} ev/s\t"
+                  f"bw={s['mbps']:.2f} MB/s\t"
+                  f"total={s['total_events']:,}")
+
+    stop_evt.set()
+    print("\nDone.")
+
+
+def main(args=None):
+    if args is None:
+        args = parse_args()
 
     if args.script is None:
         args.script = os.path.join(
@@ -535,7 +839,7 @@ def main():
         # Camera script parameters (locked while connected)
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
-        'evt_res':        8192,
+        'evt_res':        32768,
         # Visualization
         'contrast':   16,
         'color_mode': 'Grayscale',
@@ -543,6 +847,7 @@ def main():
         'window':     4,                  # Canvas: batches before auto-clear (0=manual); Sliding Window: batches to keep (min 1)
         'clear':      False,
         # Frequency visualization
+        'fc_enabled':       True,
         'fc_cutoff_period': 5.0,
         'fc_min_freq':      10.0,
         'fc_max_freq':      1000.0,
@@ -553,33 +858,34 @@ def main():
         'fc_legend_bins':   11,
     }
 
-    # Accumulation canvas: int32, initialized to 128 (mid-gray).
-    # Only modified by the render/main thread — no lock required.
-    canvas = np.full((SENSOR_H, SENSOR_W), 128, dtype=np.int32)
     last_canvas_u8  = [None]   # latest rendered uint8 canvas, for saving
     last_freq_rgba  = [None]   # latest freq texture (H×W×4 float32), for saving
-    event_buf      = deque()  # raw event arrays contributing to current canvas
+    event_buf      = deque()  # raw event arrays from last result, for saving
 
-    # Frequency camera per-pixel IIR filter state (main thread only, no lock needed)
+    # Frequency camera per-pixel IIR filter state (owned by processing_worker).
+    # Allocated here so they can be passed to the thread at connect time.
     # fc_p1  : previous raw polarity (0 or 1); dp = p - p1 drives the filter
     # fc_t_ud: time of last L+ → L− zero crossing ("up-down")
     # fc_t_du: time of last L− → L+ zero crossing ("down-up")
     # fc_per : estimated period; -1 = uninitialized, 0 = stale, >0 = valid
-    fc_L2   = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
-    fc_L1   = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
-    fc_p1   = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float32)  # ±1 convention, init -1
-    fc_t_ud = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
-    fc_t_du = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
-    fc_per  = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float64)
+    fc_L2        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
+    fc_L1        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
+    fc_p1        = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float32)  # ±1 convention, init -1
+    fc_t_ud      = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
+    fc_t_du      = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float64)
+    fc_per       = np.full((SENSOR_H, SENSOR_W), -1.0, dtype=np.float64)
     fc_coeffs = list(_freq_filter_coeffs(state['fc_cutoff_period']))
     fc_t_now  = [0.0]   # last camera timestamp processed
 
-    # Legend control — lock-free mirror of state, readable by fit_image()
+    # Lock-free mirrors of state, readable by fit_image() without taking the lock
+    fc_enabled_ref      = [state['fc_enabled']]
     fc_legend_show_ref  = [state['fc_legend_show']]
     legend_redraw_needed = [True]
 
-    event_q = queue.Queue(maxsize=4)
-    conn    = {'thread': None, 'stop_evt': None}
+    raw_q    = queue.Queue(maxsize=8)   # camera → processing (larger: absorb bursts)
+    result_q = queue.Queue(maxsize=4)   # processing → render
+    reset_evt = threading.Event()       # render → processing: reset filter/canvas state
+    conn     = {'cam_thread': None, 'proc_thread': None, 'stop_evt': None}
 
     # -----------------------------------------------------------------------
     # Dear PyGui setup
@@ -613,22 +919,28 @@ def main():
     # ---- Connection callbacks ----------------------------------------------
 
     def do_connect(port):
-        args.port        = port
-        # Reset frequency filter state so the new session starts clean
-        fc_L2[:] = 0.0;  fc_L1[:] = 0.0;  fc_p1[:] = -1.0
-        fc_t_ud[:] = 0.0; fc_t_du[:] = 0.0
-        fc_per[:] = -1.0
-        fc_t_now[0] = 0.0
+        args.port = port
         last_freq_rgba[0] = None
+        reset_evt.set()   # processing_worker will reset filter/canvas on startup
         stop_evt         = threading.Event()
         conn['stop_evt'] = stop_evt
-        t = threading.Thread(
+
+        cam_t = threading.Thread(
             target=camera_worker,
-            args=(args, state_lock, state, event_q, stop_evt),
+            args=(args, state_lock, state, raw_q, stop_evt),
             daemon=True,
         )
-        t.start()
-        conn['thread'] = t
+        proc_t = threading.Thread(
+            target=processing_worker,
+            args=(state_lock, state, raw_q, result_q, stop_evt,
+                  fc_L2, fc_L1, fc_p1, fc_t_ud, fc_t_du, fc_per,
+                  fc_coeffs, fc_t_now, reset_evt),
+            daemon=True,
+        )
+        cam_t.start()
+        proc_t.start()
+        conn['cam_thread']  = cam_t
+        conn['proc_thread'] = proc_t
         dpg.configure_item("connect_btn", label="Disconnect")
         _set_cam_settings_enabled(False)
         logging.info(f"Connecting to {port}...")
@@ -636,8 +948,9 @@ def main():
     def do_disconnect():
         if conn['stop_evt']:
             conn['stop_evt'].set()
-        conn['thread']   = None
-        conn['stop_evt'] = None
+        conn['cam_thread']  = None
+        conn['proc_thread'] = None
+        conn['stop_evt']    = None
         dpg.configure_item("connect_btn", label="Connect")
         _set_cam_settings_enabled(True)
 
@@ -664,7 +977,7 @@ def main():
             dpg.set_value("port_combo", items[0])
 
     def cb_connect(s, v, u=None):
-        if conn['thread'] and conn['thread'].is_alive():
+        if conn['cam_thread'] and conn['cam_thread'].is_alive():
             do_disconnect()
         else:
             if not args.script:
@@ -745,9 +1058,11 @@ def main():
         ts   = int(time.time())
         base = f"events_{ts}"
 
-        try:
-            from PIL import Image
+        if not _PIL_AVAILABLE:
+            logging.warning("pip install Pillow to enable image saving")
+            return
 
+        try:
             # Save event canvas image
             if color_mode == "Grayscale":
                 pil_evt = Image.fromarray(img, 'L')
@@ -772,8 +1087,8 @@ def main():
                     pil_freq.save(f"{base}_freq.png")
                 logging.info(f"Saved {base}_freq.png")
 
-        except ImportError:
-            logging.warning("pip install Pillow to enable image saving")
+        except Exception as e:
+            logging.warning(f"Failed to save images: {e}")
 
         # Save raw events as CSV
         batches = list(event_buf)
@@ -788,6 +1103,19 @@ def main():
             logging.info(f"Saved {csv_path}  ({len(all_events):,} events)")
 
     # ---- Frequency camera callbacks ----------------------------------------
+
+    def cb_fc_enabled(s, v, u=None):
+        with state_lock:
+            state['fc_enabled'] = v
+        fc_enabled_ref[0] = v
+        dpg.configure_item("fc_controls", show=v)
+        for tag in ("freq_img_h", "freq_img_v", "freq_legend_h", "freq_legend_v"):
+            (dpg.show_item if v else dpg.hide_item)(tag)
+        if not v:
+            last_freq_rgba[0] = None
+        dpg.configure_item("save_btn",
+                           label="Save Images and Events" if v else "Save Image and Events")
+        fit_image()
 
     def cb_fc_cutoff(s, v, u=None):
         with state_lock:
@@ -807,6 +1135,7 @@ def main():
     def cb_fc_n_timeout(s, v, u=None):
         with state_lock:
             state['fc_n_timeout'] = max(v, 1)
+
 
     def cb_fc_log_freq(s, v, u=None):
         with state_lock:
@@ -832,10 +1161,7 @@ def main():
         fit_image()
 
     def cb_fc_reset(s=None, v=None, u=None):
-        fc_L2[:] = 0.0;  fc_L1[:] = 0.0;  fc_p1[:] = -1.0
-        fc_t_ud[:] = 0.0; fc_t_du[:] = 0.0
-        fc_per[:] = -1.0
-        fc_t_now[0] = 0.0
+        reset_evt.set()   # processing_worker handles the actual reset safely
 
     # ---- UI layout ---------------------------------------------------------
 
@@ -988,72 +1314,77 @@ def main():
                                            callback=cb_clear, width=50, show=False)
 
                         # ── Frequency Visualization ─────────────────────────
-                        dpg.add_text("Frequency Visualization")
-
                         with dpg.group(horizontal=True):
-                            dpg.add_text("Cutoff T ")
-                            dpg.add_input_float(
-                                tag="fc_cutoff_input", label="##fc_cutoff",
-                                default_value=state['fc_cutoff_period'],
-                                min_value=1.0, min_clamped=True,
-                                step=0.5, step_fast=5.0,
-                                callback=cb_fc_cutoff, width=-1)
+                            dpg.add_checkbox(tag="fc_enabled_check",
+                                             default_value=state['fc_enabled'],
+                                             callback=cb_fc_enabled)
+                            dpg.add_text("Frequency Visualization")
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Min Hz   ")
-                            dpg.add_input_float(
-                                tag="fc_min_input", label="##fc_min",
-                                default_value=state['fc_min_freq'],
-                                min_value=0.01, min_clamped=True,
-                                step=1.0, step_fast=10.0,
-                                callback=cb_fc_min_freq, width=-1)
+                        with dpg.group(tag="fc_controls", show=state['fc_enabled']):
+                            with dpg.group(horizontal=True):
+                                dpg.add_text("Cutoff T ")
+                                dpg.add_input_float(
+                                    tag="fc_cutoff_input", label="##fc_cutoff",
+                                    default_value=state['fc_cutoff_period'],
+                                    min_value=1.0, min_clamped=True,
+                                    step=0.5, step_fast=5.0,
+                                    callback=cb_fc_cutoff, width=-1)
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Max Hz   ")
-                            dpg.add_input_float(
-                                tag="fc_max_input", label="##fc_max",
-                                default_value=state['fc_max_freq'],
-                                min_value=1.0, min_clamped=True,
-                                step=10.0, step_fast=100.0,
-                                callback=cb_fc_max_freq, width=-1)
+                            with dpg.group(horizontal=True):
+                                dpg.add_text("Min Hz   ")
+                                dpg.add_input_float(
+                                    tag="fc_min_input", label="##fc_min",
+                                    default_value=state['fc_min_freq'],
+                                    min_value=0.01, min_clamped=True,
+                                    step=1.0, step_fast=10.0,
+                                    callback=cb_fc_min_freq, width=-1)
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Timeout  ")
-                            dpg.add_input_int(
-                                tag="fc_timeout_input", label="##fc_timeout",
-                                default_value=state['fc_n_timeout'],
-                                min_value=1, min_clamped=True,
-                                step=1,
-                                callback=cb_fc_n_timeout, width=-60)
-                            dpg.add_button(label="Reset", tag="fc_reset_btn",
-                                           callback=cb_fc_reset, width=50)
+                            with dpg.group(horizontal=True):
+                                dpg.add_text("Max Hz   ")
+                                dpg.add_input_float(
+                                    tag="fc_max_input", label="##fc_max",
+                                    default_value=state['fc_max_freq'],
+                                    min_value=1.0, min_clamped=True,
+                                    step=10.0, step_fast=100.0,
+                                    callback=cb_fc_max_freq, width=-1)
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_checkbox(tag="fc_log_check",
-                                             default_value=state['fc_log_freq'],
-                                             callback=cb_fc_log_freq)
-                            dpg.add_text("Log frequency scale")
+                            with dpg.group(horizontal=True):
+                                dpg.add_text("Timeout  ")
+                                dpg.add_input_int(
+                                    tag="fc_timeout_input", label="##fc_timeout",
+                                    default_value=state['fc_n_timeout'],
+                                    min_value=1, min_clamped=True,
+                                    step=1,
+                                    callback=cb_fc_n_timeout, width=-60)
+                                dpg.add_button(label="Reset", tag="fc_reset_btn",
+                                               callback=cb_fc_reset, width=50)
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_checkbox(tag="fc_overlay_check",
-                                             default_value=state['fc_overlay'],
-                                             callback=cb_fc_overlay)
-                            dpg.add_text("Overlay active pixels")
+                            with dpg.group(horizontal=True):
+                                dpg.add_checkbox(tag="fc_log_check",
+                                                 default_value=state['fc_log_freq'],
+                                                 callback=cb_fc_log_freq)
+                                dpg.add_text("Log frequency scale")
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_checkbox(tag="fc_legend_check",
-                                             default_value=state['fc_legend_show'],
-                                             callback=cb_fc_legend_show)
-                            dpg.add_text("Show legend")
+                            with dpg.group(horizontal=True):
+                                dpg.add_checkbox(tag="fc_overlay_check",
+                                                 default_value=state['fc_overlay'],
+                                                 callback=cb_fc_overlay)
+                                dpg.add_text("Overlay active pixels")
 
-                        with dpg.group(horizontal=True):
-                            dpg.add_text("Bins     ")
-                            dpg.add_input_int(
-                                tag="fc_legend_bins_input", label="##fc_legend_bins",
-                                default_value=state['fc_legend_bins'],
-                                min_value=2, min_clamped=True,
-                                step=1, step_fast=5,
-                                callback=cb_fc_legend_bins, width=-1)
+                            with dpg.group(horizontal=True):
+                                dpg.add_checkbox(tag="fc_legend_check",
+                                                 default_value=state['fc_legend_show'],
+                                                 callback=cb_fc_legend_show)
+                                dpg.add_text("Show legend")
+
+                            with dpg.group(horizontal=True):
+                                dpg.add_text("Bins     ")
+                                dpg.add_input_int(
+                                    tag="fc_legend_bins_input", label="##fc_legend_bins",
+                                    default_value=state['fc_legend_bins'],
+                                    min_value=2, min_clamped=True,
+                                    step=1, step_fast=5,
+                                    callback=cb_fc_legend_bins, width=-1)
 
                         # ── Save ────────────────────────────────────────────
                         dpg.add_separator()
@@ -1105,13 +1436,15 @@ def main():
         fw, fh = tex_wh
         if fw <= 0 or fh <= 0:
             return
-        legend_dw = LEGEND_DW if fc_legend_show_ref[0] else 0
+        fc_en     = fc_enabled_ref[0]
+        legend_dw = (LEGEND_DW if fc_legend_show_ref[0] else 0) if fc_en else 0
+        n_images  = 2 if fc_en else 1
         avail_w = max(dpg.get_viewport_width()  - CTRL_WIDTH - 30 - legend_dw, 1)
         avail_h = max(dpg.get_viewport_height() - 60, 1)
 
         # Scale for each arrangement; pick whichever makes images larger
-        scale_h = min(avail_w / (2 * fw), avail_h / fh)   # side by side
-        scale_v = min(avail_w / fw,        avail_h / (2 * fh))  # stacked
+        scale_h = min(avail_w / (n_images * fw), avail_h / fh)           # side by side
+        scale_v = min(avail_w / fw,               avail_h / (n_images * fh))  # stacked
 
         if scale_h >= scale_v:
             layout = 'h'
@@ -1142,210 +1475,72 @@ def main():
     fit_image()
 
     # -----------------------------------------------------------------------
-    # Render loop  (drawing thread)
+    # Render loop  (drawing thread — texture uploads and GUI only)
     # -----------------------------------------------------------------------
-    batch_counter    = 0        # Canvas mode: batches since last auto/manual clear
-    last_stat_update = 0.0      # time of last stats panel refresh
-    # Sliding mode: deque of (pos_count - neg_count) int32 arrays per batch.
-    # Each entry is a (SENSOR_H, SENSOR_W) signed event-count delta (before
-    # multiplying by contrast), so contrast changes apply live to the whole window.
-    slide_buf = deque()
+    last_stat_update = 0.0
 
     while dpg.is_dearpygui_running():
 
         # Detect camera thread death (e.g. unplugged)
-        t = conn['thread']
+        t = conn['cam_thread']
         if t is not None and not t.is_alive():
-            conn['thread']   = None
-            conn['stop_evt'] = None
+            conn['cam_thread']  = None
+            conn['proc_thread'] = None
+            conn['stop_evt']    = None
             dpg.configure_item("connect_btn", label="Connect")
             _set_cam_settings_enabled(True)
 
-        # Clear requested (manual in Canvas mode, or triggered by mode switch)
+        # Snapshot visualization parameters (needed for texture conversion + legend)
         with state_lock:
-            if state['clear']:
-                state['clear'] = False
-                canvas[:] = 128
-                batch_counter = 0
-                slide_buf.clear()
-                event_buf.clear()
+            color_mode       = state['color_mode']
+            fc_enabled       = state['fc_enabled']
+            fc_min           = state['fc_min_freq']
+            fc_max           = state['fc_max_freq']
+            fc_n_to          = state['fc_n_timeout']
+            fc_log_freq      = state['fc_log_freq']
+            fc_overlay       = state['fc_overlay']
+            fc_legend_show   = state['fc_legend_show']
+            fc_legend_bins   = state['fc_legend_bins']
 
-        # Snapshot rendering parameters once
-        with state_lock:
-            contrast   = state['contrast']
-            color_mode = state['color_mode']
-            mode       = state['mode']
-            window     = state['window']
-            fc_min      = state['fc_min_freq']
-            fc_max      = state['fc_max_freq']
-            fc_n_to     = state['fc_n_timeout']
-            fc_log_freq   = state['fc_log_freq']
-            fc_overlay    = state['fc_overlay']
-            fc_legend_show = state['fc_legend_show']
-            fc_legend_bins = state['fc_legend_bins']
-
-        # Pre-compute period bounds from freq range (used per-event in freq cam loop)
-        fc_dt_min      = 1.0 / max(fc_max, 1e-9)
-        fc_dt_max      = 1.0 / max(fc_min, 1e-9)
-        fc_dt_min_half = 0.5 * fc_dt_min
-        fc_dt_max_half = 0.5 * fc_dt_max
-
-        # Drain all available event batches
-        got_events   = False
-        stats_latest = None
-
+        # Drain all available processed results; keep the latest
+        got_result   = False
+        result_latest = None
         try:
             while True:
-                events, stats = event_q.get_nowait()
-
-                xs   = events[:, 4].astype(np.int32)
-                ys   = events[:, 5].astype(np.int32)
-                pols = events[:, 0].astype(np.int32)   # 0=negative, 1=positive
-
-                # Discard out-of-bounds coordinates
-                valid = (xs >= 0) & (xs < SENSOR_W) & (ys >= 0) & (ys < SENSOR_H)
-                xs, ys, pols = xs[valid], ys[valid], pols[valid]
-
-                # Compute signed event-count delta for this batch
-                if xs.size > 0:
-                    signs    = pols * 2 - 1
-                    flat_idx = ys * SENSOR_W + xs
-                    pos = np.bincount(flat_idx[signs > 0],
-                                      minlength=SENSOR_H * SENSOR_W)
-                    neg = np.bincount(flat_idx[signs < 0],
-                                      minlength=SENSOR_H * SENSOR_W)
-                    batch_delta = (pos.astype(np.int32) - neg.astype(np.int32)
-                                   ).reshape(SENSOR_H, SENSOR_W)
-
-                    # ---- Frequency camera: per-event sequential IIR update ----
-                    # Polarity is raw 0/1; dp = p - p_prev drives the filter.
-                    # Tracks both up-down (L+→L−) and down-up (L−→L+) crossings.
-                    # Period validation uses min/max freq bounds; half-period fallback
-                    # from opposite crossing direction. Two-condition stale detection.
-                    c1, c2, c3 = fc_coeffs
-                    ts_f = (events[valid, 1].astype(np.float64)
-                            + events[valid, 2].astype(np.float64) * 1e-3
-                            + events[valid, 3].astype(np.float64) * 1e-6)
-                    for i in range(xs.size):
-                        px = int(xs[i]);  py = int(ys[i])
-                        p  = float(pols[i]) * 2.0 - 1.0  # convert 0/1 → -1/+1 (matches reference)
-                        t  = float(ts_f[i])
-                        l2 = float(fc_L2[py, px])
-                        l1 = float(fc_L1[py, px])
-                        dp = p - float(fc_p1[py, px])
-                        l_new = c1 * l1 + c2 * l2 + c3 * dp  # c2 is negative
-                        # Guard against filter divergence when coefficients change
-                        if not (abs(l_new) < 1e4):
-                            l_new = 0.0
-                            l1 = 0.0
-                        fc_L2[py, px] = l1
-                        fc_L1[py, px] = l_new
-                        fc_p1[py, px] = p
-
-                        if l1 > 0.0 and l_new < 0.0:
-                            # Up-down crossing (L+ → L−): most accurate period estimate
-                            dt_ud = t - float(fc_t_ud[py, px])
-                            dt_du = t - float(fc_t_du[py, px])
-                            if fc_dt_min <= dt_ud <= fc_dt_max:
-                                fc_per[py, px] = dt_ud
-                            else:
-                                cur = float(fc_per[py, px])
-                                if cur > 0.0:
-                                    to = cur * fc_n_to
-                                    if dt_ud > to and dt_du > 0.5 * to:
-                                        fc_per[py, px] = 0.0  # stale
-                                else:
-                                    if fc_dt_min_half <= dt_du <= fc_dt_max_half:
-                                        fc_per[py, px] = 2.0 * dt_du  # half-period fallback
-                            fc_t_ud[py, px] = t
-
-                        elif l1 < 0.0 and l_new > 0.0:
-                            # Down-up crossing (L− → L+): less accurate, only if no period yet
-                            dt_du = t - float(fc_t_du[py, px])
-                            dt_ud = t - float(fc_t_ud[py, px])
-                            cur   = float(fc_per[py, px])
-                            if fc_dt_min <= dt_du <= fc_dt_max and cur <= 0.0:
-                                fc_per[py, px] = dt_du
-                            else:
-                                if cur > 0.0:
-                                    to = cur * fc_n_to
-                                    if dt_du > to and dt_ud > 0.5 * to:
-                                        fc_per[py, px] = 0.0  # stale
-                                else:
-                                    if fc_dt_min_half <= dt_ud <= fc_dt_max_half:
-                                        fc_per[py, px] = 2.0 * dt_ud  # half-period fallback
-                            fc_t_du[py, px] = t
-
-                    fc_t_now[0] = float(ts_f[-1])
-                else:
-                    batch_delta = None
-
-                if mode == 'Canvas':
-                    # Auto-clear when finite window is full
-                    if window > 0 and batch_counter >= window:
-                        canvas[:] = 128
-                        batch_counter = 0
-                        event_buf.clear()
-                    batch_counter += 1
-                    if batch_delta is not None:
-                        canvas += batch_delta * contrast
-                        np.clip(canvas, 0, 255, out=canvas)
-                        event_buf.append(events)
-
-                else:  # Sliding Window
-                    # Keep the last max(1, window) batches
-                    w = max(1, window)
-                    if batch_delta is not None:
-                        slide_buf.append(batch_delta)
-                        event_buf.append(events)
-                    while len(slide_buf) > w:
-                        slide_buf.popleft()
-                        event_buf.popleft()
-                    # Recompute canvas from scratch each batch
-                    canvas[:] = 128
-                    for d in slide_buf:
-                        canvas += d * contrast
-                        np.clip(canvas, 0, 255, out=canvas)
-
-                stats_latest = stats
-                got_events   = True
-
+                result_latest = result_q.get_nowait()
+                got_result = True
         except queue.Empty:
             pass
 
-        if got_events and stats_latest is not None:
-            canvas_u8 = canvas.astype(np.uint8)
+        if got_result and result_latest is not None:
+            r = result_latest
+            canvas_u8 = r['canvas_u8']
             last_canvas_u8[0] = canvas_u8
+            event_buf.clear()
+            event_buf.extend(r['event_buf'])
+
             tex_data = _canvas_to_texture(canvas_u8, color_mode)
             dpg.set_value(TEXTURE_TAG, tex_data)
 
-            freq_tex = _freq_to_texture(
-                fc_per, fc_t_ud, fc_t_du, fc_t_now[0], fc_n_to, fc_min, fc_max,
-                use_log=fc_log_freq, overlay_events=fc_overlay)
-            last_freq_rgba[0] = freq_tex.reshape(SENSOR_H, SENSOR_W, 4)
-            dpg.set_value(FREQ_TEX_TAG, freq_tex)
-
-            if fc_legend_show:
-                legend_dh = max(disp_wh[1], 1)
-                _draw_freq_legend("freq_legend_h", legend_dh,
-                                  fc_min, fc_max, fc_log_freq, fc_legend_bins)
-                _draw_freq_legend("freq_legend_v", legend_dh,
-                                  fc_min, fc_max, fc_log_freq, fc_legend_bins)
-            legend_redraw_needed[0] = False
-
-            fit_image()
+            if fc_enabled and r['fc_enabled']:
+                freq_tex = _freq_to_texture(
+                    r['fc_per'], r['fc_t_ud'], r['fc_t_du'], r['fc_t_now'],
+                    fc_n_to, fc_min, fc_max,
+                    use_log=fc_log_freq, overlay_events=fc_overlay)
+                last_freq_rgba[0] = freq_tex.reshape(SENSOR_H, SENSOR_W, 4)
+                dpg.set_value(FREQ_TEX_TAG, freq_tex)
 
             now = time.perf_counter()
             if now - last_stat_update >= 0.2:
                 last_stat_update = now
-                s = stats_latest
+                s = r['stats']
                 dpg.set_value("stat_ev_batch", f"{s['event_count']:,}")
                 dpg.set_value("stat_rate",     f"{s['event_rate']:,.0f} ev/s")
                 dpg.set_value("stat_bw",       f"{s['mbps']:.2f} MB/s")
                 dpg.set_value("stat_total",    f"{s['total_events']:,}")
                 dpg.set_value("stat_uptime",   f"{s['elapsed']:.1f} s")
 
-        # Redraw legend when params changed but no new events arrived
+        # Redraw legend only when parameters changed, not every frame
         if legend_redraw_needed[0]:
             if fc_legend_show:
                 legend_dh = max(disp_wh[1], 1)
@@ -1361,4 +1556,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    _args = parse_args()
+    if _args.benchmark:
+        run_benchmark(_args)
+    else:
+        main(_args)
