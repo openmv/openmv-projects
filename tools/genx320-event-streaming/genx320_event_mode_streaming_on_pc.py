@@ -415,7 +415,7 @@ def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res):
     Substitutions made:
       CSI_FIFO_DEPTH  = <value>
       EVENT_FIFO_DEPTH = <value>
-      np.zeros((<evt_res>, 6), ...)   — the array shape
+      np.zeros((EVT_RES, 6), ...)     — the array shape (EVT_RES constant)
       def read / def readp            — use readp on Mac/Linux, read on Windows
     """
     import re
@@ -424,7 +424,7 @@ def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res):
                     f'CSI_FIFO_DEPTH = {csi_fifo_depth}', script)
     script = re.sub(r'EVENT_FIFO_DEPTH\s*=\s*\d+',
                     f'EVENT_FIFO_DEPTH = {evt_fifo_depth}', script)
-    script = re.sub(r'np\.zeros\(\(\d+,\s*6\)',
+    script = re.sub(r'np\.zeros\(\((?:\d+|EVT_RES),\s*6\)',
                     f'np.zeros(({evt_res}, 6)', script)
 
     if sys.platform != 'win32':
