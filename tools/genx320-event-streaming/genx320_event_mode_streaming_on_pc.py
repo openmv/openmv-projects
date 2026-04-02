@@ -448,10 +448,20 @@ def decode_raw_events(buf, time_high_ref):
     """Vectorized EVT 2.0 decoder.
 
     Decodes a buffer of raw 32-bit little-endian EVT 2.0 words into an (N, 6)
-    uint16 array with columns [polarity, ts_s, ts_ms, ts_us, x, y], matching
-    the layout produced by the processed-mode camera script.
+    uint16 array matching the ec_event_t layout from the processed cam script:
+      [0] type   — EC_PIX_OFF_EVENT(0), EC_PIX_ON_EVENT(1),
+                   EC_EXT_TRIGGER_FALLING(2), EC_EXT_TRIGGER_RISING(3),
+                   EC_RST_TRIGGER_FALLING(4), EC_RST_TRIGGER_RISING(5)
+      [1] ts_s   — whole seconds of timestamp
+      [2] ts_ms  — milliseconds within the second (0-999)
+      [3] ts_us  — microseconds within the millisecond (0-999)
+      [4] x      — pixel column (0 for trigger events)
+      [5] y      — pixel row    (0 for trigger events)
 
-    time_high_ref is a one-element list used to carry the running EV_TIME_HIGH
+    Handles TD pixel events (0x0/0x1) and EXT_TRIGGER events (0xA).
+    EV_TIME_HIGH (0x8) words update the running timestamp accumulator.
+
+    time_high_ref is a one-element list carrying the running EV_TIME_HIGH
     value across consecutive calls (updated in-place).
     """
     n_words = len(buf) // 4
@@ -459,48 +469,63 @@ def decode_raw_events(buf, time_high_ref):
         return np.zeros((0, 6), dtype=np.uint16)
 
     words = np.frombuffer(buf, dtype=np.uint32)
-    types = (words >> 28) & 0xF  # 4-bit type field
+    types = (words >> 28) & 0xF
 
-    # --- locate EV_TIME_HIGH events (type == 0x8) and compute their values ---
+    # --- EV_TIME_HIGH (0x8): update running timestamp accumulator ---
     th_mask = types == 0x8
     th_idx  = np.where(th_mask)[0]
     th_vals = ((words[th_mask] & 0x0FFFFFFF).astype(np.uint64)) << 6
 
-    # --- locate TD pixel events (type 0x0 = neg, 0x1 = pos) ---
-    px_mask = types <= 0x1
-    px_idx  = np.where(px_mask)[0]
+    # --- all output events: TD pixel (0x0, 0x1) + EXT_TRIGGER (0xA) ---
+    evt_mask = (types <= 0x1) | (types == 0xA)
+    evt_idx  = np.where(evt_mask)[0]
 
-    if px_idx.size == 0:
+    if evt_idx.size == 0:
         if th_vals.size > 0:
             time_high_ref[0] = int(th_vals[-1])
         return np.zeros((0, 6), dtype=np.uint16)
 
-    # --- assign the correct time_high to every pixel event (vectorized) ---
-    # For pixel event i, the applicable time_high is the last EV_TIME_HIGH
-    # whose position in the stream is strictly less than pixel event i's position.
+    # --- assign the correct time_high to every event (vectorized) ---
+    # The applicable time_high for event at position i is the last EV_TIME_HIGH
+    # whose stream position is strictly before i.
     if th_idx.size > 0:
-        ins = np.searchsorted(th_idx, px_idx, side='right') - 1
-        th_for_px = np.empty(px_idx.size, dtype=np.uint64)
+        ins = np.searchsorted(th_idx, evt_idx, side='right') - 1
+        th_for_evt = np.empty(evt_idx.size, dtype=np.uint64)
         before_first = ins < 0
-        th_for_px[before_first]  = time_high_ref[0]
-        th_for_px[~before_first] = th_vals[ins[~before_first]]
+        th_for_evt[before_first]  = time_high_ref[0]
+        th_for_evt[~before_first] = th_vals[ins[~before_first]]
         time_high_ref[0] = int(th_vals[-1])
     else:
-        th_for_px = np.full(px_idx.size, time_high_ref[0], dtype=np.uint64)
+        th_for_evt = np.full(evt_idx.size, time_high_ref[0], dtype=np.uint64)
 
-    # --- extract bit fields ---
-    pix_words = words[px_idx]
-    ts_low = ((pix_words >> 22) & 0x3F).astype(np.uint64)
-    t_us   = th_for_px | ts_low
+    # --- reconstruct full microsecond timestamp ---
+    evt_words = words[evt_idx]
+    evt_types = types[evt_idx]
+    ts_low = ((evt_words >> 22) & 0x3F).astype(np.uint64)
+    t_us   = th_for_evt | ts_low
 
-    pol  = types[px_idx].astype(np.uint16)
-    x    = ((pix_words >> 11) & 0x7FF).astype(np.uint16)
-    y    = (pix_words & 0x7FF).astype(np.uint16)
     ts_s  = (t_us // 1_000_000).astype(np.uint16)
     ts_ms = ((t_us // 1_000) % 1_000).astype(np.uint16)
     ts_us = (t_us % 1_000).astype(np.uint16)
 
-    return np.stack([pol, ts_s, ts_ms, ts_us, x, y], axis=1)
+    # --- pixel events: type is 0 (off) or 1 (on), x/y from bit fields ---
+    out_type = evt_types.astype(np.uint16)   # 0 or 1 for TD events
+    x = ((evt_words >> 11) & 0x7FF).astype(np.uint16)
+    y = (evt_words & 0x7FF).astype(np.uint16)
+
+    # --- trigger events: remap type to EC_TRIGGER_EVENT(id, polarity) ---
+    # EC_TRIGGER_EVENT = EC_EXT_TRIGGER_FALLING(2) + ((id & 1) << 1) + polarity
+    # x and y are 0 for trigger events (no pixel coordinate).
+    is_trig = evt_types == 0xA
+    if is_trig.any():
+        tw       = evt_words[is_trig]
+        trig_id  = ((tw >> 8) & 0x1F).astype(np.uint16)
+        trig_pol = (tw & 0x1).astype(np.uint16)
+        out_type[is_trig] = 2 + ((trig_id & 1) << 1) + trig_pol
+        x[is_trig] = 0
+        y[is_trig] = 0
+
+    return np.stack([out_type, ts_s, ts_ms, ts_us, x, y], axis=1)
 
 
 def camera_worker(args, state_lock, state, event_q, stop_evt):
@@ -820,7 +845,7 @@ def run_benchmark(args):
         'stream_mode':    'Raw (fastest)',
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
-        'evt_res':        32768,
+        'evt_res':        8192,
         'contrast':       16,
         'color_mode':     'Grayscale',
         'mode':           'Sliding Window',
@@ -918,9 +943,10 @@ def main(args=None):
     state_lock = threading.Lock()
     state = {
         # Camera script parameters (locked while connected)
+        'stream_mode':    'Raw (fastest)',
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
-        'evt_res':        32768,
+        'evt_res':        8192,
         # Visualization
         'contrast':   16,
         'color_mode': 'Grayscale',
@@ -1199,7 +1225,7 @@ def main(args=None):
             np.savetxt(
                 csv_path, all_events,
                 delimiter=',', fmt='%d',
-                header='polarity,sec,ms,us,x,y', comments='',
+                header='type,sec,ms,us,x,y', comments='',
             )
             logging.info(f"Saved {csv_path}  ({len(all_events):,} events)")
 
