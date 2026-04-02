@@ -12,6 +12,8 @@ All tools are built with [DearPyGui](https://github.com/hoffstadt/DearPyGui) and
 
 Real-time streaming and visualization for the [Prophesee GenX320](https://www.prophesee.ai/event-camera-genx320/) event camera sensor attached to an OpenMV Cam. Events are displayed as an accumulation canvas alongside a per-pixel frequency map computed in real time using a second-order IIR bandpass filter (FrequencyCam algorithm).
 
+![GenX320 Event Streaming GUI](genx320-event-streaming/genx320-event-streaming.png)
+
 **Key features:**
 - Dual visualization: event canvas + frequency heatmap side by side
 - Adaptive layout that maximizes image size as the window resizes
