@@ -11,7 +11,8 @@ A collection of projects built with the [OpenMV Cam](https://openmv.io) — a sm
 
 - [PC Tools](#pc-tools)
 - [Robotics](#robotics)
-- [Contributing](#contributing)
+- [Contributing to the project](#contributing-to-the-project)
+  + [Contribution guidelines](#contribution-guidelines)
 
 ---
 
@@ -21,8 +22,8 @@ Desktop GUI applications that pair with an OpenMV Cam over USB to provide real-t
 
 | Project | Description |
 |---------|-------------|
-| [GenX320 Event Streaming](tools/genx320-event-streaming/README.md) | Real-time event camera visualization with per-pixel frequency mapping for the Prophesee GenX320 sensor |
-| [CCM Tuning](tools/ccm-tuning/README.md) | Interactive Color Correction Matrix tuner — streams raw Bayer frames and replicates the N6 ISP pipeline in software |
+| [GenX320 Viz](tools/genx320-event-streaming/README.md) | Real-time event camera visualization with per-pixel frequency mapping for the Prophesee GenX320 sensor. |
+| [CCM Tuning](tools/ccm-tuning/README.md) | Interactive Color Correction Matrix tuner — streams raw Bayer frames and replicates the N6 ISP pipeline in software. |
 
 [Browse all tools](tools/README.md)
 
@@ -34,8 +35,8 @@ Complete robotics projects that use the OpenMV Cam as the primary perception sys
 
 | Project | Description |
 |---------|-------------|
-| [Donkey Self-Driving Car](robotics/donkey-car/README.md) | OpenMV-powered Donkey Car build with line following and autonomous driving |
-| [Autonomous Rover](robotics/autonomous-rover/README.md) | Tracked rover using monocular edge detection for obstacle avoidance, controlled by a Teensy 3.5 |
+| [Donkey Car](robotics/donkey-car/README.md) | OpenMV-powered Donkey Car build with line following and autonomous driving. |
+| [Autonomous Rover](robotics/autonomous-rover/README.md) | Tracked rover using monocular edge detection for obstacle avoidance, controlled by a Teensy 3.5. |
 
 [Browse all robotics projects](robotics/README.md)
 
