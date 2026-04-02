@@ -16,6 +16,7 @@ Real-time streaming and visualization for the [Prophesee GenX320](https://www.pr
 
 **Key features:**
 - Dual visualization: event canvas + frequency heatmap side by side
+- Raw streaming mode (default) sends unprocessed 4-byte EVT 2.0 words vs 12-byte decoded structs — 3× less data over USB
 - Adaptive layout that maximizes image size as the window resizes
 - Colorbar legend with log or linear frequency scale
 - Save event CSV and frequency PNG to disk

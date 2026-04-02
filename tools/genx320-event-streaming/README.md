@@ -30,12 +30,12 @@ Numba is required for the GIL-free IIR frequency camera update. On first run it 
 python genx320_event_mode_streaming_on_pc.py
 ```
 
-The companion camera script (`genx320_event_mode_streaming_on_cam.py`) is loaded automatically from the same folder. You can override any option from the command line:
+The camera script is selected automatically based on the **Stream** mode chosen in the GUI. You can override any option from the command line:
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--port PORT` | *(GUI selector)* | Serial port to connect on |
-| `--script PATH` | `genx320_event_mode_streaming_on_cam.py` | MicroPython script to run on the camera |
+| `--script PATH` | *(set by Stream mode)* | MicroPython script to run on the camera |
 | `--baudrate N` | `921600` | Serial baud rate |
 | `--crc` | off (Linux/Mac), on (Windows) | Enable CRC on the serial protocol |
 | `--seq` | on | Enable sequence numbers |
@@ -77,9 +77,10 @@ These patch the on-camera script before it is executed. They are locked while co
 
 | Control | Default | Description |
 |---------|---------|-------------|
+| Stream | Raw (fastest) | **Raw (fastest)** — streams unprocessed EVT 2.0 words, decoded on the PC; **Processed** — camera decodes events before sending |
 | CSI FIFO | 8 | Depth of the hardware CSI receive buffer |
-| EVT FIFO | 8 | Depth of the software event FIFO |
-| EVT Buffer | 32768 | Event array size (must be a power of two, 1024–65536) |
+| EVT FIFO | 8 | Depth of the software event FIFO (Processed mode only) |
+| EVT Buffer | 8192 | Event array size (must be a power of two, 1024–65536) |
 
 ### Event Visualization
 
@@ -121,7 +122,7 @@ Saves the current state to disk. The button label reflects whether frequency vis
 
 - `events_<timestamp>_evt.png` — the event canvas rendered with the current color LUT.
 - `events_<timestamp>_freq.png` — the frequency image (only saved when Frequency Visualization is enabled). If the legend is enabled it is composited onto the right side of the image.
-- `events_<timestamp>.csv` — all raw events that built the current canvas (`polarity, sec, ms, us, x, y`).
+- `events_<timestamp>.csv` — all events that built the current canvas (`type, sec, ms, us, x, y`). See **Camera Script Event Format** below for type values.
 
 These files are excluded from git via `.gitignore`.
 
@@ -149,17 +150,28 @@ camera_worker  →  raw_q  →  processing_worker  →  result_q  →  render lo
 - **processing_worker** — pulls batches from `raw_q`, accumulates the canvas, and runs the per-pixel IIR frequency filter via a Numba-compiled `nogil` function so it does not block the camera thread.
 - **render loop** — drains `result_q`, uploads textures to DearPyGui, and updates the stats panel.
 
-## Camera Script
+## Camera Script Event Format
 
-`genx320_event_mode_streaming_on_cam.py` runs on the OpenMV Cam and streams raw events back to the PC over the `openmv` serial protocol. Events are packed as 6 × uint16 little-endian rows:
+Both camera scripts produce the same event format on the PC side — a stream of 6 × uint16 little-endian rows:
 
 | Column | Value |
 |--------|-------|
-| 0 | Polarity (0 = negative, 1 = positive) |
-| 1 | Timestamp — seconds |
-| 2 | Timestamp — milliseconds |
-| 3 | Timestamp — microseconds |
-| 4 | X coordinate (0–319) |
-| 5 | Y coordinate (0–319) |
+| 0 | Type — see table below |
+| 1 | Timestamp — whole seconds |
+| 2 | Timestamp — milliseconds within the second (0–999) |
+| 3 | Timestamp — microseconds within the millisecond (0–999) |
+| 4 | X coordinate (0–319); 0 for trigger events |
+| 5 | Y coordinate (0–319); 0 for trigger events |
 
-The `CSI_FIFO_DEPTH`, `EVENT_FIFO_DEPTH`, and event buffer size are patched at runtime by the PC script from the GUI values before execution.
+| Type value | Meaning |
+|------------|---------|
+| 0 | Pixel off event (decrease in illumination) |
+| 1 | Pixel on event (increase in illumination) |
+| 2 | External trigger — falling edge |
+| 3 | External trigger — rising edge |
+| 4 | Reset trigger — falling edge |
+| 5 | Reset trigger — rising edge |
+
+**Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams unprocessed 32-bit EVT 2.0 words from the sensor (4 bytes/event vs 12 bytes/event in processed mode — 3× less data over USB). The PC decodes them vectorized using numpy with no Python loop. The decoded output is identical to processed mode.
+
+**Processed mode** (`genx320_event_mode_streaming_on_cam.py`) has the camera firmware decode each event before transmission. The event buffer size, CSI FIFO depth, and (in processed mode) event FIFO depth are patched into the script at connect time from the GUI values.
