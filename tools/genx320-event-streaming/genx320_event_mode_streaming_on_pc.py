@@ -409,29 +409,98 @@ EMA_ALPHA = 0.2
 EVT_RES_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536]
 
 
-def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res):
+def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res, raw_mode=False):
     """Patch the on-camera script with GUI-controlled parameters before exec.
 
-    Substitutions made:
-      CSI_FIFO_DEPTH  = <value>
+    Substitutions made (processed mode):
+      CSI_FIFO_DEPTH   = <value>
       EVENT_FIFO_DEPTH = <value>
-      np.zeros((EVT_RES, 6), ...)     — the array shape (EVT_RES constant)
-      def read / def readp            — use readp on Mac/Linux, read on Windows
+      np.zeros((EVT_RES, 6), ...)  — the array shape (EVT_RES constant)
+      def read / def readp         — use readp on Mac/Linux, read on Windows
+
+    Substitutions made (raw mode):
+      CSI_FIFO_DEPTH = <value>
+      EVT_RES        = <value>   — only the constant assignment
+      def read / def readp
     """
     import re
 
     script = re.sub(r'CSI_FIFO_DEPTH\s*=\s*\d+',
                     f'CSI_FIFO_DEPTH = {csi_fifo_depth}', script)
-    script = re.sub(r'EVENT_FIFO_DEPTH\s*=\s*\d+',
-                    f'EVENT_FIFO_DEPTH = {evt_fifo_depth}', script)
-    script = re.sub(r'np\.zeros\(\((?:\d+|EVT_RES),\s*6\)',
-                    f'np.zeros(({evt_res}, 6)', script)
+
+    if raw_mode:
+        script = re.sub(r'EVT_RES\s*=\s*\d+',
+                        f'EVT_RES = {evt_res}', script)
+    else:
+        script = re.sub(r'EVENT_FIFO_DEPTH\s*=\s*\d+',
+                        f'EVENT_FIFO_DEPTH = {evt_fifo_depth}', script)
+        script = re.sub(r'np\.zeros\(\((?:\d+|EVT_RES),\s*6\)',
+                        f'np.zeros(({evt_res}, 6)', script)
 
     if sys.platform != 'win32':
         script = script.replace('def read(self, offset, size):',
                                 'def readp(self, offset, size):')
 
     return script
+
+
+def decode_raw_events(buf, time_high_ref):
+    """Vectorized EVT 2.0 decoder.
+
+    Decodes a buffer of raw 32-bit little-endian EVT 2.0 words into an (N, 6)
+    uint16 array with columns [polarity, ts_s, ts_ms, ts_us, x, y], matching
+    the layout produced by the processed-mode camera script.
+
+    time_high_ref is a one-element list used to carry the running EV_TIME_HIGH
+    value across consecutive calls (updated in-place).
+    """
+    n_words = len(buf) // 4
+    if n_words == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+
+    words = np.frombuffer(buf, dtype=np.uint32)
+    types = (words >> 28) & 0xF  # 4-bit type field
+
+    # --- locate EV_TIME_HIGH events (type == 0x8) and compute their values ---
+    th_mask = types == 0x8
+    th_idx  = np.where(th_mask)[0]
+    th_vals = ((words[th_mask] & 0x0FFFFFFF).astype(np.uint64)) << 6
+
+    # --- locate TD pixel events (type 0x0 = neg, 0x1 = pos) ---
+    px_mask = types <= 0x1
+    px_idx  = np.where(px_mask)[0]
+
+    if px_idx.size == 0:
+        if th_vals.size > 0:
+            time_high_ref[0] = int(th_vals[-1])
+        return np.zeros((0, 6), dtype=np.uint16)
+
+    # --- assign the correct time_high to every pixel event (vectorized) ---
+    # For pixel event i, the applicable time_high is the last EV_TIME_HIGH
+    # whose position in the stream is strictly less than pixel event i's position.
+    if th_idx.size > 0:
+        ins = np.searchsorted(th_idx, px_idx, side='right') - 1
+        th_for_px = np.empty(px_idx.size, dtype=np.uint64)
+        before_first = ins < 0
+        th_for_px[before_first]  = time_high_ref[0]
+        th_for_px[~before_first] = th_vals[ins[~before_first]]
+        time_high_ref[0] = int(th_vals[-1])
+    else:
+        th_for_px = np.full(px_idx.size, time_high_ref[0], dtype=np.uint64)
+
+    # --- extract bit fields ---
+    pix_words = words[px_idx]
+    ts_low = ((pix_words >> 22) & 0x3F).astype(np.uint64)
+    t_us   = th_for_px | ts_low
+
+    pol  = types[px_idx].astype(np.uint16)
+    x    = ((pix_words >> 11) & 0x7FF).astype(np.uint16)
+    y    = (pix_words & 0x7FF).astype(np.uint16)
+    ts_s  = (t_us // 1_000_000).astype(np.uint16)
+    ts_ms = ((t_us // 1_000) % 1_000).astype(np.uint16)
+    ts_us = (t_us % 1_000).astype(np.uint16)
+
+    return np.stack([pol, ts_s, ts_ms, ts_us, x, y], axis=1)
 
 
 def camera_worker(args, state_lock, state, event_q, stop_evt):
@@ -449,14 +518,19 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
             with open(args.script) as f:
                 script = f.read()
             with state_lock:
-                csi_fifo  = state['csi_fifo_depth']
-                evt_fifo  = state['evt_fifo_depth']
-                evt_res   = state['evt_res']
-            script = patch_script(script, csi_fifo, evt_fifo, evt_res)
+                csi_fifo    = state['csi_fifo_depth']
+                evt_fifo    = state['evt_fifo_depth']
+                evt_res     = state['evt_res']
+                raw_mode    = state['stream_mode'] == 'Raw (fastest)'
+            script = patch_script(script, csi_fifo, evt_fifo, evt_res, raw_mode)
             logging.debug(f"Patched script: CSI_FIFO={csi_fifo} EVT_FIFO={evt_fifo} "
-                          f"EVT_RES={evt_res} readp={'yes' if sys.platform != 'win32' else 'no'}")
+                          f"EVT_RES={evt_res} raw={raw_mode} "
+                          f"readp={'yes' if sys.platform != 'win32' else 'no'}")
             camera.exec(script)
-            logging.info("Script running, streaming events...")
+            logging.info(f"Script running, streaming events ({'raw' if raw_mode else 'processed'})...")
+
+            channel        = 'raw_events' if raw_mode else 'events'
+            time_high_ref  = [0]   # running EV_TIME_HIGH accumulator for raw decoding
 
             start_time     = time.perf_counter()
             last_time      = start_time
@@ -472,15 +546,15 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
                     if text := camera.read_stdout():
                         print(f"{COLOR_CAMERA}{text}{COLOR_RESET}", end='')
 
-                if not camera.has_channel('events'):
+                if not camera.has_channel(channel):
                     time.sleep(0.01)
                     continue
 
-                if not status or not status.get('events'):
+                if not status or not status.get(channel):
                     time.sleep(0.01)
                     continue
 
-                size = camera.channel_size('events')
+                size = camera.channel_size(channel)
                 if size <= 0:
                     time.sleep(0.01)
                     continue
@@ -491,15 +565,21 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
                 if dt <= 0.0:
                     continue
 
-                data = camera.channel_read('events', size)
+                data = camera.channel_read(channel, size)
 
-                if (len(data) % 12) != 0:
-                    logging.warning(f"Misaligned packet: {len(data)} bytes (not multiple of 12)")
-                    continue
+                if raw_mode:
+                    if (len(data) % 4) != 0:
+                        logging.warning(f"Misaligned raw packet: {len(data)} bytes (not multiple of 4)")
+                        continue
+                    events = decode_raw_events(data, time_high_ref)
+                else:
+                    if (len(data) % 12) != 0:
+                        logging.warning(f"Misaligned packet: {len(data)} bytes (not multiple of 12)")
+                        continue
+                    # Each event row: 6 × uint16 little-endian
+                    # [0] polarity (0=neg, 1=pos)  [1] sec  [2] ms  [3] us  [4] x  [5] y
+                    events = np.frombuffer(data, dtype='<u2').reshape(-1, 6)
 
-                # Each event row: 6 × uint16 little-endian
-                # [0] polarity (0=neg, 1=pos)  [1] sec  [2] ms  [3] us  [4] x  [5] y
-                events      = np.frombuffer(data, dtype='<u2').reshape(-1, 6)
                 event_count = events.shape[0]
 
                 events_per_sec = event_count / dt
@@ -737,6 +817,7 @@ def run_benchmark(args):
 
     state_lock = threading.Lock()
     state = {
+        'stream_mode':    'Raw (fastest)',
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
         'evt_res':        32768,
@@ -920,6 +1001,17 @@ def main(args=None):
 
     def do_connect(port):
         args.port = port
+        # Select cam script based on stream mode
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        with state_lock:
+            raw_mode = state['stream_mode'] == 'Raw (fastest)'
+        cam_script = os.path.join(
+            script_dir,
+            'genx320_raw_event_mode_streaming_on_cam.py' if raw_mode
+            else 'genx320_event_mode_streaming_on_cam.py',
+        )
+        args.script = cam_script
+        dpg.set_value("script_path", cam_script)
         last_freq_rgba[0] = None
         reset_evt.set()   # processing_worker will reset filter/canvas on startup
         stop_evt         = threading.Event()
@@ -954,7 +1046,7 @@ def main(args=None):
         dpg.configure_item("connect_btn", label="Connect")
         _set_cam_settings_enabled(True)
 
-    CAM_SETTING_TAGS = ["csi_fifo_input", "evt_fifo_input"]
+    CAM_SETTING_TAGS = ["stream_mode_combo", "csi_fifo_input", "evt_fifo_input"]
 
     def _set_cam_settings_enabled(enabled):
         for tag in CAM_SETTING_TAGS:
@@ -988,6 +1080,15 @@ def main(args=None):
             do_connect(port)
 
     # ---- Camera settings callbacks (applied at connect time) ---------------
+
+    STREAM_MODES = ['Raw (fastest)', 'Processed']
+
+    def cb_stream_mode(s, v, u=None):
+        with state_lock:
+            state['stream_mode'] = v
+        raw = v == 'Raw (fastest)'
+        # EVT FIFO only applies to the processed cam script
+        (dpg.hide_item if raw else dpg.show_item)("evt_fifo_row")
 
     def cb_csi_fifo(s, v, u=None):
         with state_lock:
@@ -1235,6 +1336,14 @@ def main(args=None):
                         dpg.add_text("Camera Parameters  (applied at connect)")
 
                         with dpg.group(horizontal=True):
+                            dpg.add_text("Stream   ")
+                            dpg.add_combo(
+                                tag="stream_mode_combo",
+                                items=STREAM_MODES,
+                                default_value=state['stream_mode'],
+                                callback=cb_stream_mode, width=-1)
+
+                        with dpg.group(horizontal=True):
                             dpg.add_text("CSI FIFO ")
                             dpg.add_input_int(
                                 tag="csi_fifo_input", label="##csi_fifo",
@@ -1243,7 +1352,7 @@ def main(args=None):
                                 step=1, step_fast=4,
                                 callback=cb_csi_fifo, width=-1)
 
-                        with dpg.group(horizontal=True):
+                        with dpg.group(horizontal=True, tag="evt_fifo_row", show=False):
                             dpg.add_text("EVT FIFO ")
                             dpg.add_input_int(
                                 tag="evt_fifo_input", label="##evt_fifo",
