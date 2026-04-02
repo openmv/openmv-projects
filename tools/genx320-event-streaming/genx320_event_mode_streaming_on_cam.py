@@ -22,9 +22,11 @@ CSI_FIFO_DEPTH = 8
 # fifo buffer, and then sent to the PC.
 EVENT_FIFO_DEPTH = 8
 
+# Must be a power of two between 1024 and 65536.
+EVT_RES = 8192
+
 # Stores camera events (8 buffers)
-# Shape: (EVT_res, 6) where EVT_res is the event resolution
-# EVT_res: must be a power of two between 1024 and 65536.
+# Shape: (EVT_RES, 6) where EVT_RES is the event resolution
 # Columns:
 #   [0]  Event type
 #   [1]  Seconds timestamp
@@ -32,7 +34,7 @@ EVENT_FIFO_DEPTH = 8
 #   [3]  Microseconds timestamp
 #   [4]  X coordinate 0 to 319 for GENX320
 #   [5]  Y coordinate 0 to 319 for GENX320
-events = [np.zeros((8192, 6), dtype=np.uint16) for i in range(EVENT_FIFO_DEPTH)]
+events = [np.zeros((EVT_RES, 6), dtype=np.uint16) for i in range(EVENT_FIFO_DEPTH)]
 event_counts = [0 for i in range(EVENT_FIFO_DEPTH)]
 
 # ULAB .tobytes() creates shallow copy bytearrays. Wrap these in memoryviews

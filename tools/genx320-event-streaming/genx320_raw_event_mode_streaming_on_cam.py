@@ -12,9 +12,7 @@
 # Raw EVT 2.0 format
 # ------------------
 # Each event is a 32-bit little-endian word. The firmware streams these words
-# directly from the sensor without any decoding. Reference:
-#   drivers/genx320/include/evt_2_0.h
-#   drivers/sensors/genx320.c  post_process_event()
+# directly from the sensor without any decoding.
 #
 # Bit layout of each 32-bit word:
 #
