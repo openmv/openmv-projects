@@ -1,6 +1,6 @@
 # Teensy 3.5/OpenMV Rover
 
-This project was based off a couple of other rover's that I built using multi-sonar sensors for obstacle detection and avoidance.  Needless to say they eye sores with everything hanging off the platform.  For many years wanted to do something with machine vision but most of the papers and projects used stereo vision vs monocular vision.  This also required you to send back to the PC the image to process and then send the commands back.  I wanted to keep the whole system closed on the rover platform with the need for any desktop software.  That’s where the OpenMV camera came into play.  Forgot how I found out about it but when I saw it I knew I was going to start another project.
+This project was based off a couple of other rover's that I built using multi-sonar sensors for obstacle detection and avoidance.  Needless to say they eye sores with everything hanging off the platform.  For many years wanted to do something with machine vision but most of the papers and projects used stereo vision vs monocular vision.  This also required you to send back to the PC the image to process and then send the commands back.  I wanted to keep the whole system closed on the rover platform with the need for any desktop software.  That's where the OpenMV camera came into play.  Forgot how I found out about it but when I saw it I knew I was going to start another project.
 
 About the same time I found another project that used a web camera and OpenCV to identify objects and associated avoidance code.  Peter Neal of [Big Face Robotics](https://bigfacerobotics.wordpress.com/2014/12/18/obstacle-detection-using-opencv/) describes the process as follows:
 >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The method I am using involves capturing an image, converting it to grayscale, blurring it slightly
@@ -15,9 +15,11 @@ indicated by a sharp change in values in the array of nearest edges.
 
 With the help of Nyamekye over at OpenMV I was able to implement a similar method.  Instead of changing the head angle, as Mr. Neal does, I determined the center position of large gaps (you can specify the gap size in pixels in the code) and found the center point.  Using this I was able to determing the angluar position in the FOV and then transmitted over the OpenMV UART to the Teensy 3.5 which does the rest.  I did add WiFi capabality to send the images but it slows the frame rate down too much.  The results of this process is illustrated in following figure:
 
-![EdgeDetection Test](https://github.com/mjs513/TeensyOpenMV/blob/master/images/EdgeDetectionTest.png)
+![EdgeDetection Test](images/EdgeDetectionTest.png)
 
 Now for the Rover design itself.  I used an off the shelf tracked chasis that I picked up off ebay quite a while ago.  Couldn't find the link to the exact one that i am using but a similar one is still available, http://www.ebay.com/itm/Tracked-Robot-Smart-Car-Platform-Aluminum-alloy-Chassis-with-Dual-DC-9V-Motor-/282615264298?hash=item41cd2eb42a:g:~FQAAOSw3ntZkVza .  One of the nice things about the chasis is that it had a Hall Effector Sensor that I could use for odometry.  A little different than the quad encoders but usuable.
+
+![Rover Chassis](images/EbayRover.jpg)
 
 Angular information is passed to the T3.5 which does the Obstacle avoidance stuff. It uses a single VL53L0X TOF sensor for distance measures, a BN055 for orientation which is used for turn control once the obstacle free direction is picked, a RC TX/Receiver and a RF module for telemetry and commands. As in my other project it has an odometry module for relative tracking based on the hall effect sensors on the motors (fixed the errors in my other code). It also has a manual mode for just sending motor commands. The odometry module receives manual commands individually in the format fx, bx, ly,ry where x is distance you want to travel in cm's and y is the relative angle you want to turn. I also use odometry once a direction is picked by the detection algorithm and then move half that distance before another round of image analysis is performed.
 
@@ -35,5 +37,5 @@ Here are a couple of screen shots of the rover:
 1. http://forums.openmv.io/viewtopic.php?f=5&t=276
 2. http://forums.openmv.io/viewtopic.php?f=6&t=393
 
-![Front View](https://github.com/mjs513/TeensyOpenMV/blob/master/images/Rover2.png)
-![Side View](https://github.com/mjs513/TeensyOpenMV/blob/master/images/Rover1.png)
+![Front View](images/Rover2.png)
+![Side View](images/Rover1.png)

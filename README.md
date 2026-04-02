@@ -24,7 +24,7 @@ Desktop GUI applications that pair with an OpenMV Cam over USB to provide real-t
 | [GenX320 Event Streaming](tools/genx320-event-streaming/README.md) | Real-time event camera visualization with per-pixel frequency mapping for the Prophesee GenX320 sensor |
 | [CCM Tuning](tools/ccm-tuning/README.md) | Interactive Color Correction Matrix tuner — streams raw Bayer frames and replicates the N6 ISP pipeline in software |
 
-Browse all tools → [tools/](tools/README.md)
+[Browse all tools](tools/README.md)
 
 ---
 
@@ -37,7 +37,7 @@ Complete robotics projects that use the OpenMV Cam as the primary perception sys
 | [Donkey Self-Driving Car](robotics/donkey-car/README.md) | OpenMV-powered Donkey Car build with line following and autonomous driving |
 | [Autonomous Rover](robotics/autonomous-rover/README.md) | Tracked rover using monocular edge detection for obstacle avoidance, controlled by a Teensy 3.5 |
 
-Browse all robotics projects → [robotics/](robotics/README.md)
+[Browse all robotics projects](robotics/README.md)
 
 ---
 
