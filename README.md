@@ -1,7 +1,7 @@
+[![GitHub license](https://img.shields.io/github/license/openmv/openmv-projects?label=license%20%E2%9A%96)](https://github.com/openmv/openmv-projects/blob/master/LICENSE)
 [![GitHub forks](https://img.shields.io/github/forks/openmv/openmv-projects?color=green)](https://github.com/openmv/openmv-projects/network)
 [![GitHub stars](https://img.shields.io/github/stars/openmv/openmv-projects?color=yellow)](https://github.com/openmv/openmv-projects/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/openmv/openmv-projects?color=orange)](https://github.com/openmv/openmv-projects/issues)
-[![GitHub license](https://img.shields.io/github/license/openmv/openmv-projects?label=license%20%E2%9A%96)](https://github.com/openmv/openmv-projects/blob/master/LICENSE)
 
 <img width="480" src="https://raw.githubusercontent.com/openmv/openmv-media/master/logos/openmv-logo/logo.png">
 
@@ -41,11 +41,31 @@ Browse all robotics projects → [robotics/](robotics/README.md)
 
 ---
 
-## Contributing
+## Contributing to the project
 
-Contributions are welcome. If you have a project built with an OpenMV Cam that you'd like to share, open a pull request with your project in the appropriate subfolder (`tools/` or `robotics/`) along with a `README.md` and any supporting images.
+Contributions are most welcome. If you are interested in contributing to the project, start by creating a fork of the following repository:
 
-Please follow the existing folder structure and include:
-- A clear `README.md` describing what the project does and how to run it
-- Any images or screenshots in an `images/` subfolder
-- Source code and dependencies listed
+* https://github.com/openmv/openmv-projects.git
+
+Clone the forked repository, and add a remote to the main repository:
+```bash
+git clone https://github.com/<username>/openmv-projects.git
+git -C openmv-projects remote add upstream https://github.com/openmv/openmv-projects.git
+```
+
+Now the repository is ready for pull requests. To send a pull request, create a new feature branch and push it to origin, and use GitHub to create the pull request from the forked repository to the upstream openmv/openmv-projects repository. For example:
+```bash
+git checkout -b <some_branch_name>
+<commit changes>
+git push origin -u <some_branch_name>
+```
+
+### Contribution guidelines
+
+Please follow the [best practices](https://developers.google.com/blockly/guides/modify/contribute/write_a_good_pr) when sending pull requests upstream. In general, the pull request should:
+* Fix one problem. Don't try to tackle multiple issues at once.
+* Split the changes into logical groups using git commits.
+* Pull request title should be less than 78 characters, and match this pattern:
+  * `<scope>:<1 space><description><.>`
+* Commit subject line should be less than 78 characters, and match this pattern:
+  * `<scope>:<1 space><description><.>`
