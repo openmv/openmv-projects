@@ -28,8 +28,6 @@ A tracked rover that uses monocular edge detection on the OpenMV Cam to navigate
 
 The detection algorithm identifies the largest contiguous horizontal gap in a Canny edge map, finds its center of mass, and converts it to an angle within the camera's field of view. The Teensy then uses a VL53L0X TOF sensor and BNO055 IMU to execute the turn and track distance traveled before requesting the next frame analysis.
 
-<img src="autonomous-rover/images/EdgeDetectionTest.png" width="480">
-
 **Hardware:**
 - OpenMV Cam (vision + UART)
 - Teensy 3.5 (motion control, odometry)
@@ -37,5 +35,3 @@ The detection algorithm identifies the largest contiguous horizontal gap in a Ca
 - BNO055 IMU (turn control)
 - Tracked aluminum chassis with Hall effect odometry sensors
 - Adafruit Motor Shield V2
-
-<img src="autonomous-rover/images/EbayRover.jpg" width="480">
