@@ -817,6 +817,10 @@ def parse_args():
     p.add_argument('--debug',       action='store_true')
     p.add_argument('--benchmark',   action='store_true',
                    help='Headless mode: print throughput stats, no GUI')
+    p.add_argument('--raw',         type=str2bool, nargs='?', const=True, default=True,
+                   help='Use raw event streaming (default: true)')
+    p.add_argument('--evt-res',     type=int,   default=8192,
+                   help='Event buffer resolution (default: 8192)')
     return p.parse_args()
 
 
@@ -834,18 +838,12 @@ def run_benchmark(args):
         args.port = ports[0]
         print(f"Auto-selected port: {args.port}")
 
-    if args.script is None:
-        args.script = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'genx320_event_mode_streaming_on_cam.py',
-        )
-
     state_lock = threading.Lock()
     state = {
-        'stream_mode':    'Raw (fastest)',
+        'stream_mode':    'Raw (fastest)' if args.raw else 'Processed',
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
-        'evt_res':        8192,
+        'evt_res':        args.evt_res,
         'contrast':       16,
         'color_mode':     'Grayscale',
         'mode':           'Sliding Window',
@@ -861,6 +859,14 @@ def run_benchmark(args):
         'fc_legend_show':   False,
         'fc_legend_bins':   11,
     }
+
+    if args.script is None:
+        raw_mode = state['stream_mode'] == 'Raw (fastest)'
+        args.script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'genx320_raw_event_mode_streaming_on_cam.py' if raw_mode
+            else 'genx320_event_mode_streaming_on_cam.py',
+        )
 
     fc_L2        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
     fc_L1        = np.zeros((SENSOR_H, SENSOR_W), dtype=np.float32)
@@ -943,10 +949,10 @@ def main(args=None):
     state_lock = threading.Lock()
     state = {
         # Camera script parameters (locked while connected)
-        'stream_mode':    'Raw (fastest)',
+        'stream_mode':    'Raw (fastest)' if args.raw else 'Processed',
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
-        'evt_res':        8192,
+        'evt_res':        args.evt_res,
         # Visualization
         'contrast':   16,
         'color_mode': 'Grayscale',
