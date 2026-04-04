@@ -1073,6 +1073,10 @@ def main(args=None):
             except Exception:
                 pass
 
+        # Reset UI if the camera thread died unexpectedly (e.g. connection error)
+        if conn['thread'] and not conn['thread'].is_alive():
+            do_disconnect()
+
         dpg.render_dearpygui_frame()
 
     if conn['stop_evt']:

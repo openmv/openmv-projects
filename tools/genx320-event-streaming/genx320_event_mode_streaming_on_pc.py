@@ -1691,6 +1691,10 @@ def main(args=None):
                                   fc_min, fc_max, fc_log_freq, fc_legend_bins)
             legend_redraw_needed[0] = False
 
+        # Reset UI if the camera thread died unexpectedly (e.g. connection error)
+        if conn['cam_thread'] and not conn['cam_thread'].is_alive():
+            do_disconnect()
+
         dpg.render_dearpygui_frame()
 
     dpg.destroy_context()

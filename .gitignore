@@ -12,3 +12,9 @@ ccm_params_*.txt
 # GenX320 event streaming saved output files
 events_*.png
 events_*.csv
+
+# Thermal overlay calibration saved output files
+thermal_main_*.png
+thermal_lepton_*.png
+thermal_composite_*.png
+thermal_transform_*.txt

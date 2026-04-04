@@ -29,6 +29,28 @@ python genx320-event-streaming/genx320_event_mode_streaming_on_pc.py
 
 ---
 
+## [Thermal Overlay Calibration](thermal-overlay-calibration/README.md)
+
+Streams color and thermal (FLIR Lepton) frames simultaneously and composites them into a calibrated overlay. Supports manual 4-point picking or automatic heated-checkerboard detection to compute a perspective homography for pixel-accurate alignment.
+
+![Thermal Overlay Calibration GUI](thermal-overlay-calibration/thermal-overlay-calibration.jpeg)
+
+**Key features:**
+- Dual live preview: main camera + Lepton side by side at matched display height
+- Composite view with adjustable alpha blending (0–100%)
+- Manual alignment: click 4 matching landmarks on each image
+- Automatic alignment: heated checkerboard detection with CLAHE, Otsu thresholding, per-channel analysis, and RANSAC homography using all corners
+- Configurable pixel format (RGB565/GRAYSCALE) and color palette (IRONBOW/RAINBOW) per camera
+- Copyable 3×3 transform matrix displayed after calibration
+- Save main, Lepton, composite PNGs and transform TXT to disk
+
+```
+pip install dearpygui numpy pyserial Pillow openmv opencv-python
+python thermal-overlay-calibration/thermal_overlay_calibration_on_pc.py
+```
+
+---
+
 ## [CCM Tuning](ccm-tuning/README.md)
 
 An interactive Color Correction Matrix (CCM) tuner for the OpenMV N6 camera. Streams raw Bayer frames over USB and applies a full software replica of the N6 ISP pipeline — debayer, black level, auto white balance, CCM, brightness/contrast/gamma — so you can tune every parameter live without reflashing.
