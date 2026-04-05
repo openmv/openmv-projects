@@ -53,7 +53,9 @@ python thermal-overlay-calibration/thermal_overlay_calibration_on_pc.py
 
 ## [GenX320 Overlay Calibration](genx320-overlay-calibration/README.md)
 
-Streams a color frame and a 320×320 grayscale histogram frame from the GenX320 event camera simultaneously and composites them into a calibrated overlay. Supports manual 4-point picking or automatic checkerboard detection to compute a perspective homography for pixel-accurate alignment.
+Streams a color frame and a 320×320 grayscale histogram frame from the GenX320 event camera simultaneously and composites them into a calibrated overlay. Supports manual 4-point picking or automatic blob-grid checkerboard detection to compute a perspective homography for pixel-accurate alignment.
+
+![GenX320 Overlay Calibration GUI](genx320-overlay-calibration/genx320_overlay_calibration.jpeg)
 
 **Key features:**
 - Dual live preview: main camera + GenX320 histogram side by side at matched display height

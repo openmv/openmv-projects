@@ -2,6 +2,8 @@
 
 A PC-side GUI that streams a color frame and a 320×320 grayscale histogram frame from the GenX320 event camera simultaneously, displays them side by side, and composites them into a calibrated overlay. A homography computed from point correspondences aligns the GenX320 onto the main camera's coordinate space for a pixel-accurate overlay.
 
+![GenX320 Overlay Calibration GUI](genx320_overlay_calibration.jpeg)
+
 ## Platform Notes
 
 macOS and Linux are recommended for the best GUI performance and throughput. On Windows, DearPyGui rendering can be noticeably slower, which may reduce frame rates. The camera script and serial protocol work on all platforms, but if you experience a sluggish UI or low frame rate, consider switching to a Mac or Linux machine.
@@ -89,30 +91,32 @@ The GenX320 always outputs 320×320 grayscale in histogram mode — no additiona
 
 A slider from 0% to 100% controlling how much of the GenX320 frame is blended over the main frame in the composite. Defaults to 50%.
 
+### Calibration Pattern
+
+Opens a separate window displaying a flickering checkerboard (alternating between blank and checkerboard). Since event cameras only generate output in response to brightness changes, the flicker provides continuous edge events without requiring any physical movement. Configure **Cols**, **Rows**, and **Hz** to control the pattern, then click **Show Calibration Pattern**. Point the screen at both cameras. The pattern window is available regardless of alignment mode.
+
 ### Overlay Alignment
 
 Computes a homography (perspective warp) that maps GenX320 pixel coordinates to main camera pixel coordinates for a geometrically correct overlay.
 
 #### Manual Mode
 
-Click **Pick Main Points**, then click 4 landmark points on the main camera image. Click **Pick GenX320 Points**, then click the same 4 landmarks in the same order on the GenX320 image. The homography is computed automatically once all 8 points are set. Numbered circles (1–4) are drawn on each image as you click to track progress.
+Click **Pick Main Points**, then click 4 landmark points on the main camera image. Click **Pick GenX320 Points**, then click the same 4 landmarks in the same order on the GenX320 image. The homography is computed automatically once all 8 points are set. Numbered circles (1-4) are drawn on each image as you click to track progress.
 
 > **Tip:** Spread the 4 points across the full frame for the most accurate warp. Avoid clustering all points in one region.
 
 #### Automatic Mode
 
-Click **Show Calibration Pattern** to open a flickering checkerboard window. Point it at both cameras — the GenX320 generates events from the flicker transitions without any physical board movement. Set the pattern **Cols**, **Rows**, and **Hz** as desired, then click **Auto Detect**.
+Click **Auto Detect** while a checkerboard is visible to both cameras. The detector tries up to 10 times with fresh frames, so the flickering pattern can produce different event snapshots across attempts.
 
 The detector uses a blob-grid algorithm designed for event camera images: heavy median filtering removes event noise, Otsu thresholding binarizes the image, and contour detection finds the dark-square centroids. These are organized into a grid by clustering Y coordinates, and inner corner points are computed from 2x2 blocks of adjacent blob centers. The same algorithm runs on both the GenX320 and main camera images to ensure point correspondence, and a RANSAC homography is computed from all matched corners.
 
-The grid size is detected automatically — no manual corner count is needed.
-
-The status line reports the number of inliers after detection.
+The grid size is detected automatically -- no manual corner count is needed. The status line reports the number of inliers after detection.
 
 #### Shared Controls
 
-- **Reset Homography** — clears all points and the transform.
-- **transform =** — read-only copyable text box showing the computed 3×3 perspective matrix, ready to paste into firmware or a processing script.
+- **Reset Homography** -- clears all points and the transform.
+- **transform =** -- read-only copyable text box showing the computed 3x3 perspective matrix, ready to paste into firmware or a processing script.
 
 ### Save Images
 

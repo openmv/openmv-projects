@@ -702,8 +702,8 @@ def main(args=None):
         pts    = np.array([pt for row in inner_corners for pt in row],
                           dtype=np.float32).reshape(-1, 1, 2)
 
-        print(f"  Blob grid: {len(grid_rows)}x{most_common} blobs -> "
-              f"{n_rows}x{n_cols} inner corners", flush=True)
+        logging.debug(f"Blob grid: {len(grid_rows)}x{most_common} blobs -> "
+                      f"{n_rows}x{n_cols} inner corners")
 
         return True, pts, (n_cols, n_rows)
 
@@ -815,57 +815,60 @@ def main(args=None):
 
         dpg.set_value("pick_status", "Running detection pipeline...")
 
+        MAX_ATTEMPTS = 10
+        RETRY_SEC    = 0.1
+
         def _detect():
             import cv2
 
-            # Use blob-grid detection on both images so the point types match
-            # (centroids of dark-square contours, organized into a grid).
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                # Grab fresh frames each attempt
+                if attempt > 1:
+                    time.sleep(RETRY_SEC)
+                m_rgb = last_main_rgb[0]
+                g_rgb = last_genx320_rgb[0]
+                if m_rgb is None or g_rgb is None:
+                    continue
+                m_snap = m_rgb.copy()
+                g_snap = cv2.resize(g_rgb, (gw * SCALE, gh * SCALE),
+                                    interpolation=cv2.INTER_CUBIC)
 
-            print("Detecting board in GenX320 (blob grid)...", flush=True)
-            ret_g, corners_g, grid_g = _find_board_blobs(genx320_snap)
-
-            if not ret_g:
                 dpg.set_value("pick_status",
-                              "Board not found in GenX320 image.\n"
-                              "Ensure the pattern is visible and generating events.")
-                return
+                              f"Detecting... attempt {attempt}/{MAX_ATTEMPTS}")
 
-            print("Detecting board in main image (blob grid)...", flush=True)
-            ret_m, corners_m, grid_m = _find_board_blobs(main_snap)
-            print(f"  Main: {'FOUND' if ret_m else 'not found'}", flush=True)
+                ret_g, corners_g, grid_g = _find_board_blobs(g_snap)
+                if not ret_g:
+                    continue
 
-            if not ret_m:
+                ret_m, corners_m, grid_m = _find_board_blobs(m_snap)
+                if not ret_m:
+                    continue
+
+                if grid_g != grid_m:
+                    continue
+
+                corners_g_scaled = corners_g / SCALE
+                src = corners_g_scaled.reshape(-1, 2).astype(np.float32)
+                dst = corners_m.reshape(-1, 2).astype(np.float32)
+
+                H, inlier_mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
+                if H is None:
+                    continue
+
+                n = len(src)
+                inliers = int(inlier_mask.sum()) if inlier_mask is not None else n
+                homography[0] = H
+                dpg.set_value("homography_text", _fmt_homography(H))
+                dpg.configure_item("save_btn", label="Save Images + Transform")
                 dpg.set_value("pick_status",
-                              "Board found in GenX320 but not in main camera.\n"
-                              "Ensure the full board is visible to both cameras.")
+                              f"Auto: {grid_g[0]}x{grid_g[1]} grid, "
+                              f"{inliers}/{n} inliers "
+                              f"(attempt {attempt}/{MAX_ATTEMPTS}).")
                 return
 
-            # Both grids must have the same shape for point correspondence
-            if grid_g != grid_m:
-                dpg.set_value("pick_status",
-                              f"Grid mismatch: GenX320 {grid_g[0]}x{grid_g[1]} "
-                              f"vs main {grid_m[0]}x{grid_m[1]}.\n"
-                              f"Ensure same part of board is visible to both.")
-                return
-
-            # Scale GenX320 corners back to original resolution
-            corners_g_scaled = corners_g / SCALE
-
-            src = corners_g_scaled.reshape(-1, 2).astype(np.float32)
-            dst = corners_m.reshape(-1, 2).astype(np.float32)
-
-            H, inlier_mask = cv2.findHomography(src, dst, cv2.RANSAC, 5.0)
-            if H is None:
-                dpg.set_value("pick_status", "Homography computation failed.")
-                return
-            n = len(src)
-            inliers = int(inlier_mask.sum()) if inlier_mask is not None else n
-            homography[0] = H
-            dpg.set_value("homography_text", _fmt_homography(H))
-            dpg.configure_item("save_btn", label="Save Images + Transform")
             dpg.set_value("pick_status",
-                          f"Auto: {grid_g[0]}x{grid_g[1]} grid, "
-                          f"{inliers}/{n} inliers.")
+                          f"Board not found after {MAX_ATTEMPTS} attempts.\n"
+                          f"Ensure the pattern is visible to both cameras.")
 
         threading.Thread(target=_detect, daemon=True).start()
 
@@ -1009,6 +1012,31 @@ def main(args=None):
                             format="%d%%", width=-1,
                             callback=lambda s, v, u=None: overlay_alpha.__setitem__(0, v / 100.0))
 
+                        # ── Calibration Pattern ─────────────────────────────
+                        dpg.add_separator()
+                        dpg.add_text("Calibration Pattern")
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Cols ")
+                            dpg.add_input_int(tag="board_cols",
+                                              default_value=7,
+                                              min_value=2, max_value=20,
+                                              width=-1)
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Rows ")
+                            dpg.add_input_int(tag="board_rows",
+                                              default_value=7,
+                                              min_value=2, max_value=20,
+                                              width=-1)
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Hz   ")
+                            dpg.add_input_int(tag="pattern_hz",
+                                              default_value=2,
+                                              min_value=1, max_value=30,
+                                              width=-1)
+                        dpg.add_button(label="Show Calibration Pattern",
+                                       tag="pattern_btn",
+                                       callback=cb_show_hide_pattern, width=-1)
+
                         # ── Overlay Alignment ───────────────────────────────
                         dpg.add_separator()
                         dpg.add_text("Overlay Alignment")
@@ -1034,35 +1062,10 @@ def main(args=None):
 
                         with dpg.group(tag="auto_group", show=False):
                             dpg.add_text(
-                                "Show a flickering checkerboard pattern to "
-                                "generate events, then click Auto Detect. "
-                                "The grid is detected automatically.",
+                                "Click Auto Detect to find the checkerboard "
+                                "in both images. The grid is detected "
+                                "automatically.",
                                 wrap=CTRL_WIDTH - 10)
-                            dpg.add_separator()
-                            dpg.add_text("Pattern Window",
-                                         color=(150, 150, 150, 255))
-                            with dpg.group(horizontal=True):
-                                dpg.add_text("Cols ")
-                                dpg.add_input_int(tag="board_cols",
-                                                  default_value=7,
-                                                  min_value=2, max_value=20,
-                                                  width=-1)
-                            with dpg.group(horizontal=True):
-                                dpg.add_text("Rows ")
-                                dpg.add_input_int(tag="board_rows",
-                                                  default_value=7,
-                                                  min_value=2, max_value=20,
-                                                  width=-1)
-                            with dpg.group(horizontal=True):
-                                dpg.add_text("Hz   ")
-                                dpg.add_input_int(tag="pattern_hz",
-                                                  default_value=2,
-                                                  min_value=1, max_value=30,
-                                                  width=-1)
-                            dpg.add_button(label="Show Calibration Pattern",
-                                           tag="pattern_btn",
-                                           callback=cb_show_hide_pattern, width=-1)
-                            dpg.add_separator()
                             dpg.add_button(label="Auto Detect",
                                            callback=cb_auto_detect, width=-1)
 
@@ -1100,7 +1103,7 @@ def main(args=None):
 
     dpg.create_viewport(
         title="GenX320 Overlay Calibration",
-        width=1280, height=800,
+        width=1400, height=900,
         resizable=True,
     )
     dpg.setup_dearpygui()

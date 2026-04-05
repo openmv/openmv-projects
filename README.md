@@ -24,7 +24,7 @@ Desktop GUI applications that pair with an OpenMV Cam over USB to provide real-t
 |---------|-------------|
 | [GenX320 Viz](tools/genx320-event-streaming/README.md) | Real-time event camera visualization with per-pixel frequency mapping for the Prophesee GenX320 sensor. |
 | [Thermal Overlay Calibration](tools/thermal-overlay-calibration/README.md) | Streams color and FLIR Lepton thermal frames simultaneously and composites them with manual or automatic heated-checkerboard homography alignment. |
-| [GenX320 Overlay Calibration](tools/genx320-overlay-calibration/README.md) | Streams color and GenX320 histogram frames simultaneously and composites them with manual or automatic checkerboard homography alignment. |
+| [GenX320 Overlay Calibration](tools/genx320-overlay-calibration/README.md) | Streams color and GenX320 histogram frames simultaneously and composites them with manual or automatic blob-grid checkerboard homography alignment. |
 | [CCM Tuning](tools/ccm-tuning/README.md) | Interactive Color Correction Matrix tuner — streams raw Bayer frames and replicates the N6 ISP pipeline in software. |
 
 [Browse all tools](tools/README.md)
