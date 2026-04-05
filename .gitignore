@@ -18,3 +18,9 @@ thermal_main_*.png
 thermal_lepton_*.png
 thermal_composite_*.png
 thermal_transform_*.txt
+
+# GenX320 overlay calibration saved output files
+genx320_overlay_main_*.png
+genx320_overlay_genx320_*.png
+genx320_overlay_composite_*.png
+genx320_overlay_transform_*.txt
