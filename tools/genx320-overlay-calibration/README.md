@@ -101,9 +101,11 @@ Click **Pick Main Points**, then click 4 landmark points on the main camera imag
 
 #### Automatic Mode
 
-Place a visible checkerboard in the field of view of both cameras. The GenX320 in histogram mode accumulates events proportional to scene activity — a checkerboard under a flickering or moving light source produces a clear pattern. Set **Cols** and **Rows** to the number of *inner* corners of the board (e.g. a 8×8 square checkerboard has 7×7 inner corners), then click **Auto Detect**.
+Click **Show Calibration Pattern** to open a flickering checkerboard window. Point it at both cameras — the GenX320 generates events from the flicker transitions without any physical board movement. Set the pattern **Cols**, **Rows**, and **Hz** as desired, then click **Auto Detect**.
 
-The detector tries multiple preprocessing variants — CLAHE contrast enhancement, unsharp masking, Otsu binary thresholding, image inversion, and each individual RGB channel — to maximize robustness. If OpenCV 4+ is available, the saddle-point `findChessboardCornersSB` is tried first before falling back to the classic `findChessboardCorners`. All detected corners are used for the homography (RANSAC), giving much higher accuracy than 4-point manual picking.
+The detector uses a blob-grid algorithm designed for event camera images: heavy median filtering removes event noise, Otsu thresholding binarizes the image, and contour detection finds the dark-square centroids. These are organized into a grid by clustering Y coordinates, and inner corner points are computed from 2x2 blocks of adjacent blob centers. The same algorithm runs on both the GenX320 and main camera images to ensure point correspondence, and a RANSAC homography is computed from all matched corners.
+
+The grid size is detected automatically — no manual corner count is needed.
 
 The status line reports the number of inliers after detection.
 

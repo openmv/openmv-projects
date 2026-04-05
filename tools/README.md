@@ -59,7 +59,7 @@ Streams a color frame and a 320×320 grayscale histogram frame from the GenX320 
 - Dual live preview: main camera + GenX320 histogram side by side at matched display height
 - Composite view with adjustable alpha blending (0–100%)
 - Manual alignment: click 4 matching landmarks on each image
-- Automatic alignment: checkerboard detection with CLAHE, Otsu thresholding, per-channel analysis, and RANSAC homography using all corners
+- Automatic alignment: blob-grid detection with median filtering, Otsu thresholding, and RANSAC homography — includes a flickering calibration pattern window for event generation
 - GenX320 always operates in histogram mode (320×320 grayscale) — no format controls needed
 - Copyable 3×3 transform matrix displayed after calibration
 - Save main, GenX320, composite PNGs and transform TXT to disk

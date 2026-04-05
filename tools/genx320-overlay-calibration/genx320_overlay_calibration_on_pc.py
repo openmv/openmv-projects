@@ -604,23 +604,6 @@ def main(args=None):
         dpg.configure_item("manual_group", show=not is_auto)
         dpg.configure_item("auto_group",   show=is_auto)
 
-    def _find_board(img_rgb, board_size):
-        """Standard checkerboard detection (works for main camera)."""
-        import cv2
-        gray          = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-        flags_classic = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE
-
-        if hasattr(cv2, 'findChessboardCornersSB'):
-            ret, corners = cv2.findChessboardCornersSB(gray, board_size, flags=0)
-            if ret:
-                return True, corners
-
-        ret, corners = cv2.findChessboardCorners(gray, board_size, flags=flags_classic)
-        if ret:
-            return True, corners
-
-        return False, None
-
     def _find_board_blobs(img_rgb):
         """Blob-grid detection for event camera images.
 
@@ -723,27 +706,6 @@ def main(args=None):
               f"{n_rows}x{n_cols} inner corners", flush=True)
 
         return True, pts, (n_cols, n_rows)
-
-    def _show_debug_image(gray, corners, title):
-        """Save debug image with detected corners and open it."""
-        import cv2
-        bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-        if corners is not None:
-            for i, pt in enumerate(corners.reshape(-1, 2)):
-                x, y = int(pt[0]), int(pt[1])
-                cv2.circle(bgr, (x, y), 6, (0, 255, 0), -1)
-                cv2.putText(bgr, str(i), (x + 5, y - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            'genx320_pipeline_debug.png')
-        cv2.imwrite(path, bgr)
-        print(f"Debug image saved: {path}")
-        if sys.platform == 'win32':
-            os.startfile(path)
-        elif sys.platform == 'darwin':
-            os.system(f'open "{path}"')
-        else:
-            os.system(f'xdg-open "{path}"')
 
     def _run_pattern_window(cols, rows, hz, stop_evt):
         import tkinter as tk
@@ -861,9 +823,6 @@ def main(args=None):
 
             print("Detecting board in GenX320 (blob grid)...", flush=True)
             ret_g, corners_g, grid_g = _find_board_blobs(genx320_snap)
-            genx320_gray = cv2.cvtColor(genx320_snap, cv2.COLOR_RGB2GRAY)
-            _show_debug_image(genx320_gray, corners_g if ret_g else None,
-                              "GenX320 blob grid")
 
             if not ret_g:
                 dpg.set_value("pick_status",
