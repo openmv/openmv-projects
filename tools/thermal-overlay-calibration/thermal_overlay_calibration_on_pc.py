@@ -431,34 +431,11 @@ def main(args=None):
     # Helpers
     # -----------------------------------------------------------------------
 
-    def _reset_textures(mw, mh, lw, lh):
-        # lock_mutex() blocks render_dearpygui_frame on the main thread while
-        # we delete and recreate textures from the callback worker thread.
-        dpg.lock_mutex()
-        try:
-            for old_tag in (MAIN_TEX_TAG, LEPTON_TEX_TAG, COMP_TEX_TAG):
-                dpg.delete_item(old_tag)
-                if dpg.does_alias_exist(old_tag):
-                    dpg.remove_alias(old_tag)
-            dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
-                                    tag=MAIN_TEX_TAG,   parent=TEX_REG_TAG)
-            dpg.add_dynamic_texture(lw, lh, _make_placeholder(lw, lh),
-                                    tag=LEPTON_TEX_TAG, parent=TEX_REG_TAG)
-            dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
-                                    tag=COMP_TEX_TAG,   parent=TEX_REG_TAG)
-            if dpg.does_item_exist("main_img"):
-                dpg.configure_item("main_img",   texture_tag=MAIN_TEX_TAG)
-                dpg.configure_item("lepton_img", texture_tag=LEPTON_TEX_TAG)
-                dpg.configure_item("comp_img",   texture_tag=COMP_TEX_TAG)
-        finally:
-            dpg.unlock_mutex()
-
     def _do_connect(port):
         args.port = port
-        # Reset to 1×1 — actual dimensions come from the camera via _channel_shape
+        # Reset size tracking; main loop will recreate textures on first frame.
         main_wh[0], main_wh[1]     = 1, 1
         lepton_wh[0], lepton_wh[1] = 1, 1
-        _reset_textures(1, 1, 1, 1)
         homography[0] = None
         main_pts.clear()
         lepton_pts.clear()
