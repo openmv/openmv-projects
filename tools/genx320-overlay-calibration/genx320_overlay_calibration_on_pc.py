@@ -402,23 +402,26 @@ def main(args=None):
     # -----------------------------------------------------------------------
 
     def _reset_textures(mw, mh, gw, gh):
-        # split_frame() blocks until the renderer finishes its current frame,
-        # so deleting in-use textures here cannot race render_dearpygui_frame.
-        dpg.split_frame()
-        for old_tag in (MAIN_TEX_TAG, GENX320_TEX_TAG, COMP_TEX_TAG):
-            dpg.delete_item(old_tag)
-            if dpg.does_alias_exist(old_tag):
-                dpg.remove_alias(old_tag)
-        dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
-                                tag=MAIN_TEX_TAG,    parent=TEX_REG_TAG)
-        dpg.add_dynamic_texture(gw, gh, _make_placeholder(gw, gh),
-                                tag=GENX320_TEX_TAG, parent=TEX_REG_TAG)
-        dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
-                                tag=COMP_TEX_TAG,    parent=TEX_REG_TAG)
-        if dpg.does_item_exist("main_img"):
-            dpg.configure_item("main_img",    texture_tag=MAIN_TEX_TAG)
-            dpg.configure_item("genx320_img", texture_tag=GENX320_TEX_TAG)
-            dpg.configure_item("comp_img",    texture_tag=COMP_TEX_TAG)
+        # lock_mutex() blocks render_dearpygui_frame on the main thread while
+        # we delete and recreate textures from the callback worker thread.
+        dpg.lock_mutex()
+        try:
+            for old_tag in (MAIN_TEX_TAG, GENX320_TEX_TAG, COMP_TEX_TAG):
+                dpg.delete_item(old_tag)
+                if dpg.does_alias_exist(old_tag):
+                    dpg.remove_alias(old_tag)
+            dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
+                                    tag=MAIN_TEX_TAG,    parent=TEX_REG_TAG)
+            dpg.add_dynamic_texture(gw, gh, _make_placeholder(gw, gh),
+                                    tag=GENX320_TEX_TAG, parent=TEX_REG_TAG)
+            dpg.add_dynamic_texture(mw, mh, _make_placeholder(mw, mh),
+                                    tag=COMP_TEX_TAG,    parent=TEX_REG_TAG)
+            if dpg.does_item_exist("main_img"):
+                dpg.configure_item("main_img",    texture_tag=MAIN_TEX_TAG)
+                dpg.configure_item("genx320_img", texture_tag=GENX320_TEX_TAG)
+                dpg.configure_item("comp_img",    texture_tag=COMP_TEX_TAG)
+        finally:
+            dpg.unlock_mutex()
 
     def _do_connect(port):
         args.port = port
