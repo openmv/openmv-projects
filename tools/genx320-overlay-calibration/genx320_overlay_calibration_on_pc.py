@@ -402,6 +402,9 @@ def main(args=None):
     # -----------------------------------------------------------------------
 
     def _reset_textures(mw, mh, gw, gh):
+        # split_frame() blocks until the renderer finishes its current frame,
+        # so deleting in-use textures here cannot race render_dearpygui_frame.
+        dpg.split_frame()
         for old_tag in (MAIN_TEX_TAG, GENX320_TEX_TAG, COMP_TEX_TAG):
             dpg.delete_item(old_tag)
             if dpg.does_alias_exist(old_tag):

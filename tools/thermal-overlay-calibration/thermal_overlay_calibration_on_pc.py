@@ -432,6 +432,9 @@ def main(args=None):
     # -----------------------------------------------------------------------
 
     def _reset_textures(mw, mh, lw, lh):
+        # split_frame() blocks until the renderer finishes its current frame,
+        # so deleting in-use textures here cannot race render_dearpygui_frame.
+        dpg.split_frame()
         for old_tag in (MAIN_TEX_TAG, LEPTON_TEX_TAG, COMP_TEX_TAG):
             dpg.delete_item(old_tag)
             if dpg.does_alias_exist(old_tag):
@@ -1052,6 +1055,7 @@ def main(args=None):
                 data, w, h = main_frame
                 if w != main_wh[0] or h != main_wh[1]:
                     main_wh[0], main_wh[1] = w, h
+                    dpg.split_frame()
                     for t in (MAIN_TEX_TAG, COMP_TEX_TAG):
                         dpg.delete_item(t)
                         if dpg.does_alias_exist(t):
@@ -1079,6 +1083,7 @@ def main(args=None):
                 data, w, h = lepton_frame
                 if w != lepton_wh[0] or h != lepton_wh[1]:
                     lepton_wh[0], lepton_wh[1] = w, h
+                    dpg.split_frame()
                     dpg.delete_item(LEPTON_TEX_TAG)
                     if dpg.does_alias_exist(LEPTON_TEX_TAG):
                         dpg.remove_alias(LEPTON_TEX_TAG)
