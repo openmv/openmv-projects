@@ -686,6 +686,12 @@ def processing_worker(state_lock, state, raw_q, result_q, stop_evt,
         valid = (xs >= 0) & (xs < SENSOR_W) & (ys >= 0) & (ys < SENSOR_H)
         xs, ys, pols = xs[valid], ys[valid], pols[valid]
 
+        with state_lock:
+            fc_enabled = state['fc_enabled']
+            fc_min  = state['fc_min_freq']
+            fc_max  = state['fc_max_freq']
+            fc_n_to = state['fc_n_timeout']
+
         batch_delta = None
         if xs.size > 0:
             signs    = pols * 2 - 1
@@ -693,12 +699,6 @@ def processing_worker(state_lock, state, raw_q, result_q, stop_evt,
             pos = np.bincount(flat_idx[signs > 0], minlength=SENSOR_H * SENSOR_W)
             neg = np.bincount(flat_idx[signs < 0], minlength=SENSOR_H * SENSOR_W)
             batch_delta = (pos.astype(np.int32) - neg.astype(np.int32)).reshape(SENSOR_H, SENSOR_W)
-
-            with state_lock:
-                fc_enabled = state['fc_enabled']
-                fc_min  = state['fc_min_freq']
-                fc_max  = state['fc_max_freq']
-                fc_n_to = state['fc_n_timeout']
 
             if fc_enabled:
                 ts_f = (events[valid, 1].astype(np.float64)
