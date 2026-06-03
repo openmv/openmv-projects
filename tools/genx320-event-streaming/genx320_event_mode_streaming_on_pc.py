@@ -5,7 +5,7 @@
 # https://github.com/openmv/openmv/blob/master/LICENSE
 #
 # GenX320 event camera visualization GUI for PC.
-# Requires: pip install dearpygui numpy numba Pillow pyserial
+# Requires: Python 3.12+ and `pip install dearpygui numpy numba Pillow pyserial openmv`
 #
 # Two threads: camera_worker (receives events) and render loop (draws).
 # Canvas initialized to 128; events add contrast*polarity until clamping at 0/255.
@@ -13,6 +13,19 @@
 #
 
 import sys
+
+# The openmv library uses `int in EnumType` membership tests that only work on
+# Python 3.12+. Fail fast with a clear message instead of a cryptic EnumMeta
+# TypeError at connect time.
+if sys.version_info < (3, 12):
+    sys.exit(
+        f"Error: Python 3.12 or newer is required "
+        f"(detected Python {sys.version_info.major}.{sys.version_info.minor}).\n"
+        f"The openmv library uses enum features only available in Python 3.12+.\n"
+        f"Install Python 3.12+ (via pyenv, deadsnakes PPA, or python.org) and "
+        f"re-run with that interpreter."
+    )
+
 import os
 import argparse
 import time
