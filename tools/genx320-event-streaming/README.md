@@ -14,15 +14,18 @@ CRC is disabled by default on macOS and Linux for better USB throughput. It is e
 
 ## Prerequisites
 
-1. **OpenMV IDE** v4.8.8 or later.
-2. **OpenMV Cam Firmware** v5.0.0 or later. Update via `Tools → Install Latest Development Release` in the IDE.
-3. **Python dependencies:**
+1. **Python 3.12 or newer.** The `openmv` package uses enum membership tests that only work on Python 3.12+. The script will fail fast with a clear message on older Python versions. Install via [pyenv](https://github.com/pyenv/pyenv), the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) on Ubuntu, or [python.org](https://www.python.org/downloads/).
+2. **OpenMV IDE** v4.8.8 or later.
+3. **OpenMV Cam Firmware** v5.0.0 or later. Update via `Tools → Install Latest Development Release` in the IDE.
+4. **Python dependencies:**
 
 ```
 pip install dearpygui numpy numba pyserial Pillow openmv
 ```
 
-Numba is required for the GIL-free IIR frequency camera update. On first run it JIT-compiles the inner loop (a few seconds); subsequent runs use the cached build.
+Numba is required for the GIL-free IIR frequency camera update. On first run it JIT-compiles the inner loop (a few seconds); subsequent runs use the cached build. Pillow is optional (used for legend rendering and frequency image saving).
+
+If a required package is missing the script will exit at startup with a `pip install ...` command listing every missing package.
 
 ## Running
 

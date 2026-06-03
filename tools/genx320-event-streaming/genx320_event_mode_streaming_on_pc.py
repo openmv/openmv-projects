@@ -34,16 +34,43 @@ import signal
 import threading
 import queue
 from collections import deque
-import numpy as np
-import numba
+
+# Wrap third-party imports so missing dependencies produce one clear
+# `pip install ...` message instead of a single ModuleNotFoundError.
+_MISSING = []
+try:
+    import numpy as np
+except ImportError:
+    _MISSING.append('numpy')
+try:
+    import numba
+except ImportError:
+    _MISSING.append('numba')
+try:
+    import serial.tools.list_ports
+except ImportError:
+    _MISSING.append('pyserial')
+try:
+    import dearpygui.dearpygui as dpg
+except ImportError:
+    _MISSING.append('dearpygui')
+try:
+    from openmv.camera import Camera
+except ImportError:
+    _MISSING.append('openmv')
+if _MISSING:
+    sys.exit(
+        f"Error: Missing required Python packages: {', '.join(_MISSING)}\n"
+        f"Install them with:\n"
+        f"    pip install {' '.join(_MISSING)}"
+    )
+
+# Pillow is optional (used for legend rendering); fall back gracefully.
 try:
     from PIL import Image, ImageDraw
     _PIL_AVAILABLE = True
 except ImportError:
     _PIL_AVAILABLE = False
-import serial.tools.list_ports
-import dearpygui.dearpygui as dpg
-from openmv.camera import Camera
 
 
 COLOR_CAMERA = "\033[32m"

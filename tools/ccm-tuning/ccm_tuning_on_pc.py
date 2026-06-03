@@ -32,11 +32,36 @@ import logging
 import signal
 import threading
 import queue
-import numpy as np
-import cv2
-import serial.tools.list_ports
-import dearpygui.dearpygui as dpg
-from openmv.camera import Camera
+
+# Wrap third-party imports so missing dependencies produce one clear
+# `pip install ...` message instead of a single ModuleNotFoundError.
+_MISSING = []
+try:
+    import numpy as np
+except ImportError:
+    _MISSING.append('numpy')
+try:
+    import cv2
+except ImportError:
+    _MISSING.append('opencv-python')
+try:
+    import serial.tools.list_ports
+except ImportError:
+    _MISSING.append('pyserial')
+try:
+    import dearpygui.dearpygui as dpg
+except ImportError:
+    _MISSING.append('dearpygui')
+try:
+    from openmv.camera import Camera
+except ImportError:
+    _MISSING.append('openmv')
+if _MISSING:
+    sys.exit(
+        f"Error: Missing required Python packages: {', '.join(_MISSING)}\n"
+        f"Install them with:\n"
+        f"    pip install {' '.join(_MISSING)}"
+    )
 
 
 COLOR_CAMERA = "\033[32m"

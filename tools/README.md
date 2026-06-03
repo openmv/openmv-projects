@@ -4,6 +4,8 @@ Desktop GUI applications that pair with an OpenMV Cam over USB serial. Each tool
 
 All tools are built with [DearPyGui](https://github.com/hoffstadt/DearPyGui) and communicate with the camera via the [openmv](https://pypi.org/project/openmv/) Python package.
 
+> **Python 3.12+ required.** The `openmv` package uses enum membership tests that only work on Python 3.12 or newer. The scripts will fail fast with a clear message on older Python versions. Install Python 3.12+ via [pyenv](https://github.com/pyenv/pyenv), the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) on Ubuntu, or [python.org](https://www.python.org/downloads/).
+
 > **Platform note:** macOS and Linux give the best performance. On Windows, GUI rendering and USB transfer throughput can be lower, which may reduce frame or event rates at high data volumes.
 
 ---
@@ -23,7 +25,7 @@ Real-time streaming and visualization for the [Prophesee GenX320](https://www.pr
 - Configurable FIFO depths, event buffer size, contrast, and colormap
 
 ```
-pip install dearpygui numpy pyserial Pillow openmv
+pip install dearpygui numpy numba pyserial Pillow openmv
 python genx320-event-streaming/genx320_event_mode_streaming_on_pc.py
 ```
 

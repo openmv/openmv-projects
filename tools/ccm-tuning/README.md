@@ -24,13 +24,16 @@ All parameters are applied in software on the PC so you can tune them interactiv
 
 ## Prerequisites
 
-1. **OpenMV IDE** v4.8.4 or later — used to initially set up the camera firmware.
-2. **OpenMV Cam Firmware** v5.0.0 or later.
-3. **Python dependencies:**
+1. **Python 3.12 or newer.** The `openmv` package uses enum membership tests that only work on Python 3.12+. The script will fail fast with a clear message on older Python versions. Install via [pyenv](https://github.com/pyenv/pyenv), the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) on Ubuntu, or [python.org](https://www.python.org/downloads/).
+2. **OpenMV IDE** v4.8.4 or later — used to initially set up the camera firmware.
+3. **OpenMV Cam Firmware** v5.0.0 or later.
+4. **Python dependencies:**
 
 ```
-pip install dearpygui opencv-python numpy pyserial Pillow openmv
+pip install dearpygui opencv-python numpy pyserial openmv
 ```
+
+If a required package is missing the script will exit at startup with a `pip install ...` command listing every missing package.
 
 ## Running
 
