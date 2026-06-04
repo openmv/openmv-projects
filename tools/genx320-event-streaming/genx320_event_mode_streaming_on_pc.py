@@ -611,7 +611,8 @@ def _wait_for_script_stopped(camera, timeout, drain_stdout=False):
         camera._handle_event = orig_handle
 
 
-def camera_worker(args, state_lock, state, event_q, stop_evt):
+def camera_worker(args, state_lock, state, event_q, stop_evt,
+                  record=None, record_lock=None):
     try:
         with Camera(
             args.port, baudrate=args.baudrate, crc=args.crc, seq=args.seq,
@@ -681,6 +682,25 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
                     if (len(data) % 4) != 0:
                         logging.warning(f"Misaligned raw packet: {len(data)} bytes (not multiple of 4)")
                         continue
+                    # If recording is active, append the raw EVT 2.0 byte stream
+                    # before decoding so the file is a verbatim copy of what the
+                    # sensor emitted (no rewrite, no re-pack).
+                    if record is not None:
+                        with record_lock:
+                            rec_file = record['file']
+                        if rec_file is not None:
+                            try:
+                                rec_file.write(data)
+                                with record_lock:
+                                    record['bytes'] += len(data)
+                            except Exception as e:
+                                logging.error(f"Recording write failed: {e}")
+                                with record_lock:
+                                    try:
+                                        record['file'].close()
+                                    except Exception:
+                                        pass
+                                    record['file'] = None
                     events = decode_raw_events(data, time_high_ref)
                 else:
                     if (len(data) % 12) != 0:
@@ -1095,6 +1115,11 @@ def main(args=None):
     reset_evt = threading.Event()       # render → processing: reset filter/canvas state
     conn     = {'cam_thread': None, 'proc_thread': None, 'stop_evt': None}
 
+    # Raw recording state (only used in raw stream mode). camera_worker writes
+    # the EVT 2.0 byte stream verbatim into record['file'] when set.
+    record      = {'file': None, 'path': None, 'bytes': 0, 'start': 0.0}
+    record_lock = threading.Lock()
+
     # -----------------------------------------------------------------------
     # Dear PyGui setup
     # -----------------------------------------------------------------------
@@ -1146,7 +1171,7 @@ def main(args=None):
 
         cam_t = threading.Thread(
             target=camera_worker,
-            args=(args, state_lock, state, raw_q, stop_evt),
+            args=(args, state_lock, state, raw_q, stop_evt, record, record_lock),
             daemon=True,
         )
         proc_t = threading.Thread(
@@ -1162,6 +1187,9 @@ def main(args=None):
         conn['proc_thread'] = proc_t
         dpg.configure_item("connect_btn", label="Disconnect")
         _set_cam_settings_enabled(False)
+        # The Record Raw Events button is only meaningful in raw stream mode.
+        dpg.configure_item("record_btn", enabled=raw_mode,
+                           label="Record Raw Events")
         logging.info(f"Connecting to {port}...")
 
     def do_disconnect():
@@ -1179,6 +1207,10 @@ def main(args=None):
         conn['cam_thread']  = None
         conn['proc_thread'] = None
         conn['stop_evt']    = None
+        # Close any active recording so we don't leak a half-written file.
+        _stop_recording()
+        dpg.configure_item("record_btn", enabled=False,
+                           label="Record Raw Events")
         dpg.configure_item("connect_btn", label="Connect")
         _set_cam_settings_enabled(True)
 
@@ -1279,6 +1311,49 @@ def main(args=None):
             mode = state['mode']
             window_by_mode[mode] = v
         _sync_window_ui(v, mode)
+
+    def _stop_recording():
+        """Close the active raw-events recording file, if any. Idempotent."""
+        with record_lock:
+            f       = record['file']
+            path    = record['path']
+            written = record['bytes']
+            elapsed = time.perf_counter() - record['start'] if f else 0.0
+            record['file']  = None
+            record['path']  = None
+            record['bytes'] = 0
+        if f is not None:
+            try:
+                f.close()
+            except Exception:
+                pass
+            logging.info(f"Recording stopped: {path} "
+                         f"({written:,} bytes, {elapsed:.1f}s)")
+
+    def cb_record(s=None, v=None, u=None):
+        # Toggle recording. Button only fires when enabled, which is only true
+        # while connected in Raw stream mode.
+        with record_lock:
+            recording = record['file'] is not None
+        if recording:
+            _stop_recording()
+            dpg.configure_item("record_btn", label="Record Raw Events")
+            return
+        # Start a new recording — verbatim EVT 2.0 byte stream.
+        ts   = time.strftime("%Y%m%d_%H%M%S")
+        path = f"events_{ts}_raw.bin"
+        try:
+            f = open(path, "wb")
+        except Exception as e:
+            logging.error(f"Failed to open {path} for recording: {e}")
+            return
+        with record_lock:
+            record['file']  = f
+            record['path']  = path
+            record['bytes'] = 0
+            record['start'] = time.perf_counter()
+        dpg.configure_item("record_btn", label="Stop Recording")
+        logging.info(f"Recording raw events to {path}")
 
     def cb_save(s=None, v=None, u=None):
         img      = last_canvas_u8[0]
@@ -1635,6 +1710,9 @@ def main(args=None):
                         dpg.add_separator()
                         dpg.add_button(label="Save Images and Events",
                                        tag="save_btn", callback=cb_save, width=-1)
+                        dpg.add_button(label="Record Raw Events",
+                                       tag="record_btn", callback=cb_record,
+                                       width=-1, enabled=False)
 
                         # ── Stats ───────────────────────────────────────────
                         dpg.add_separator()
@@ -1810,6 +1888,7 @@ def main(args=None):
         t = conn[key]
         if t is not None and t.is_alive():
             t.join(timeout=3.0)
+    _stop_recording()
 
     dpg.destroy_context()
 

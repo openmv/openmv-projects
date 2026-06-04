@@ -129,6 +129,18 @@ Saves the current state to disk. The button label reflects whether frequency vis
 
 These files are excluded from git via `.gitignore`.
 
+### Record Raw Events
+
+Continuous recording of the unprocessed sensor stream to a binary file. The button is **only enabled when connected in Raw stream mode** — in Processed mode the camera firmware has already decoded the events, so there is no raw stream to capture.
+
+Click **Record Raw Events** to begin a recording. The button changes to **Stop Recording** and the file grows as events stream in (no buffering — every USB packet is flushed as it arrives). Click again to stop; the file is closed and the elapsed time / byte count is logged.
+
+A recording is also closed automatically on Disconnect and on window close so the file is never left half-written.
+
+- `events_<timestamp>_raw.bin` — verbatim EVT 2.0 byte stream as emitted by the sensor (see **Raw Recording File Format** below).
+
+These files are excluded from git via `.gitignore`.
+
 ### Statistics
 
 Live event throughput, updated at 5 Hz:
@@ -176,5 +188,52 @@ Both camera scripts produce the same event format on the PC side — a stream of
 | 5 | Reset trigger — rising edge |
 
 **Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams unprocessed 32-bit EVT 2.0 words from the sensor (4 bytes/event vs 12 bytes/event in processed mode — 3× less data over USB). The PC decodes them vectorized using numpy with no Python loop. The decoded output is identical to processed mode.
+
+## Raw Recording File Format
+
+`events_<timestamp>_raw.bin` is a verbatim dump of the sensor's EVT 2.0 stream. There is **no file header** — the file is simply a sequence of 32-bit little-endian words, exactly as the GenX320 emitted them. Word count = file size in bytes ÷ 4.
+
+Each 32-bit word is one of:
+
+| Bits [31:28] (type) | Meaning |
+|---|---|
+| `0x0` TD_LOW       | Pixel event — decrease in illumination (negative polarity) |
+| `0x1` TD_HIGH      | Pixel event — increase in illumination (positive polarity) |
+| `0x8` EV_TIME_HIGH | Upper 28 bits of the microsecond timestamp counter |
+| `0xA` EXT_TRIGGER  | External trigger event |
+| `0xE` OTHERS       | Reserved for future extension |
+| `0xF` CONTINUED    | Extra data appended to the previous event |
+
+### TD_LOW / TD_HIGH (pixel events, type 0x0 / 0x1)
+
+```
+Bits [27:22]  ts (6)   — timestamp low, microseconds (0–63 µs)
+Bits [21:11]  x (11)   — pixel column (0–319)
+Bits [10:0]   y (11)   — pixel row    (0–319)
+```
+
+Reconstruct the full microsecond timestamp by ORing the most recent `EV_TIME_HIGH` value with `ts`:
+
+```
+t_us = time_high | ts
+```
+
+### EV_TIME_HIGH (timestamp rollover, type 0x8)
+
+```
+Bits [27:0]  time_high (28) — upper bits of the timestamp counter
+```
+
+Update the running `time_high` accumulator on each occurrence:
+
+```
+time_high = (word & 0x0FFFFFFF) << 6   # units: microseconds
+```
+
+`EV_TIME_HIGH` is emitted by the sensor periodically and **must be tracked across the stream** — pixel events only carry the low 6 bits of the timestamp.
+
+### Reference decoder
+
+The same vectorized numpy decoder used in the live stream can be applied to a recording — read the file as `<u4` and pass the buffer to `decode_raw_events()` in `genx320_event_mode_streaming_on_pc.py`. Output columns match the CSV format above (`type, sec, ms, us, x, y`).
 
 **Processed mode** (`genx320_event_mode_streaming_on_cam.py`) has the camera firmware decode each event before transmission. The event buffer size, CSI FIFO depth, and (in processed mode) event FIFO depth are patched into the script at connect time from the GUI values.
