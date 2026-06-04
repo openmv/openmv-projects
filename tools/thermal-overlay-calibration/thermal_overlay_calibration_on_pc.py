@@ -173,6 +173,46 @@ def patch_script(script, main_res, lepton_res, main_pixfmt, lepton_pixfmt, lepto
 # Camera worker
 # ---------------------------------------------------------------------------
 
+def _wait_for_script_stopped(camera, timeout, drain_stdout=False):
+    """Wait for the camera-side script to actually report Script Stopped on the
+    stdin channel. camera.stop() is fire-and-forget — it only sends STDIN_STOP
+    and does not wait for the script's main loop to unwind. If we proceed to
+    camera.exec() while the previous script is still holding peripherals,
+    exec triggers a soft reboot before the script has released hardware, and
+    the new script crashes during sensor init.
+
+    drain_stdout=True drains the camera's stdout buffer while waiting — useful
+    on initial connect when a previous run left output queued. Do NOT enable
+    during shutdown paths.
+    """
+    stopped_evt = threading.Event()
+    orig_handle = camera._handle_event
+
+    def wrapped_handle(channel_id, event):
+        orig_handle(channel_id, event)
+        ch = camera.channels_by_id.get(channel_id, {})
+        if ch.get('name') == 'stdin' and event == 0:
+            stopped_evt.set()
+
+    camera._handle_event = wrapped_handle
+    try:
+        deadline = time.perf_counter() + timeout
+        while time.perf_counter() < deadline:
+            if stopped_evt.is_set():
+                return True
+            try:
+                camera.poll_events()
+                if drain_stdout:
+                    while camera.read_stdout():
+                        pass
+            except Exception:
+                pass
+            time.sleep(0.02)
+        return False
+    finally:
+        camera._handle_event = orig_handle
+
+
 def camera_worker(args, state_lock, state, frame_q, stop_evt):
     try:
         with Camera(
@@ -183,7 +223,9 @@ def camera_worker(args, state_lock, state, frame_q, stop_evt):
         ) as camera:
             logging.info(f"Connected to OpenMV on {args.port}")
             camera.stop()
-            time.sleep(0.5)
+            if not _wait_for_script_stopped(camera, timeout=1.0, drain_stdout=True):
+                logging.warning("No Script Stopped event within 1s; previous "
+                                "script may still be holding hardware")
 
             with open(args.script) as f:
                 script = f.read()
@@ -280,6 +322,14 @@ def camera_worker(args, state_lock, state, frame_q, stop_evt):
                     except queue.Empty:
                         pass
                 frame_q.put((main_frame, lepton_frame, stats))
+
+            # Stop the camera-side script on clean shutdown so the next connect
+            # finds the camera idle. Fire-and-forget — don't wait, since the
+            # next connect's _wait_for_script_stopped handles leftover state.
+            try:
+                camera.stop()
+            except Exception:
+                pass
 
     except Exception as e:
         logging.error(f"Camera error: {e}")
@@ -494,6 +544,14 @@ def main(args=None):
     def _do_disconnect():
         if conn['stop_evt']:
             conn['stop_evt'].set()
+        # Wait for the worker thread to release the serial port and finish
+        # before the user can click Connect again — otherwise the new
+        # connection races the old one for /dev/ttyACM*.
+        t = conn['thread']
+        if t is not None and t.is_alive():
+            t.join(timeout=3.0)
+            if t.is_alive():
+                logging.warning("camera thread did not exit cleanly within 3s")
         conn['thread']   = None
         conn['stop_evt'] = None
         dpg.configure_item("connect_btn", label="Connect")
@@ -1171,10 +1229,16 @@ def main(args=None):
 
         dpg.render_dearpygui_frame()
 
-    dpg.destroy_context()
-
+    # Render loop exited (window closed / Ctrl+C). Make sure the worker
+    # thread tears down the Camera() cleanly so the on-camera script is
+    # stopped and the serial port is released before the process exits.
     if conn['stop_evt']:
         conn['stop_evt'].set()
+    t = conn['thread']
+    if t is not None and t.is_alive():
+        t.join(timeout=3.0)
+
+    dpg.destroy_context()
 
     print("\nDone.")
 

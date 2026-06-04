@@ -568,6 +568,49 @@ def decode_raw_events(buf, time_high_ref):
     return np.stack([out_type, ts_s, ts_ms, ts_us, x, y], axis=1)
 
 
+def _wait_for_script_stopped(camera, timeout, drain_stdout=False):
+    """Wait for the camera-side script to actually report Script Stopped on the
+    stdin channel. camera.stop() is fire-and-forget — it only sends STDIN_STOP
+    and does not wait for the script's main loop to unwind. If we proceed to
+    camera.exec() while the previous script is still holding peripherals
+    (e.g. the CSI/GenX320 sensor), exec triggers a soft reboot that fires
+    before the script has released hardware, and the new script crashes
+    during sensor init.
+
+    drain_stdout=True drains the camera's stdout buffer while waiting — useful
+    on initial connect when a previous run left output queued, since a full
+    stdout buffer can backpressure the script. Do NOT enable during shutdown
+    paths: read_stdout's CHANNEL_SIZE/CHANNEL_READ round-trips can interfere
+    with cleanup. Returns True if the stop was confirmed, False on timeout.
+    """
+    stopped_evt = threading.Event()
+    orig_handle = camera._handle_event
+
+    def wrapped_handle(channel_id, event):
+        orig_handle(channel_id, event)
+        ch = camera.channels_by_id.get(channel_id, {})
+        if ch.get('name') == 'stdin' and event == 0:
+            stopped_evt.set()
+
+    camera._handle_event = wrapped_handle
+    try:
+        deadline = time.perf_counter() + timeout
+        while time.perf_counter() < deadline:
+            if stopped_evt.is_set():
+                return True
+            try:
+                camera.poll_events()
+                if drain_stdout:
+                    while camera.read_stdout():
+                        pass
+            except Exception:
+                pass
+            time.sleep(0.02)
+        return False
+    finally:
+        camera._handle_event = orig_handle
+
+
 def camera_worker(args, state_lock, state, event_q, stop_evt):
     try:
         with Camera(
@@ -578,7 +621,9 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
         ) as camera:
             logging.info(f"Connected to OpenMV on {args.port}")
             camera.stop()
-            time.sleep(0.5)
+            if not _wait_for_script_stopped(camera, timeout=1.0, drain_stdout=True):
+                logging.warning("No Script Stopped event within 1s; previous "
+                                "script may still be holding hardware")
 
             with open(args.script) as f:
                 script = f.read()
@@ -679,6 +724,16 @@ def camera_worker(args, state_lock, state, event_q, stop_evt):
                     except queue.Empty:
                         pass
                 event_q.put((events, stats))
+
+            # Stop the camera-side script on clean shutdown so the next connect
+            # finds the camera idle. Fire-and-forget — don't wait, since the
+            # next connect's _wait_for_script_stopped handles leftover state
+            # and waiting here just makes Disconnect feel sluggish (the button
+            # can't flip to "Connect" until this returns).
+            try:
+                camera.stop()
+            except Exception:
+                pass
 
     except Exception as e:
         logging.error(f"Camera error: {e}")
@@ -1112,6 +1167,15 @@ def main(args=None):
     def do_disconnect():
         if conn['stop_evt']:
             conn['stop_evt'].set()
+        # Wait for the worker threads to release the serial port and finish
+        # before the user can click Connect again — otherwise the new
+        # connection races the old one for /dev/ttyACM*.
+        for key in ('cam_thread', 'proc_thread'):
+            t = conn[key]
+            if t is not None and t.is_alive():
+                t.join(timeout=3.0)
+                if t.is_alive():
+                    logging.warning(f"{key} did not exit cleanly within 3s")
         conn['cam_thread']  = None
         conn['proc_thread'] = None
         conn['stop_evt']    = None
@@ -1736,6 +1800,16 @@ def main(args=None):
             do_disconnect()
 
         dpg.render_dearpygui_frame()
+
+    # Render loop exited (window closed / Ctrl+C). Make sure the worker
+    # thread tears down the Camera() cleanly so the on-camera script is
+    # stopped and the serial port is released before the process exits.
+    if conn['stop_evt']:
+        conn['stop_evt'].set()
+    for key in ('cam_thread', 'proc_thread'):
+        t = conn[key]
+        if t is not None and t.is_alive():
+            t.join(timeout=3.0)
 
     dpg.destroy_context()
 
