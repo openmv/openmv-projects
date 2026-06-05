@@ -147,3 +147,18 @@ These files are excluded from git via `.gitignore`.
 | Bandwidth | Combined USB data rate (MB/s, EMA) |
 | Total frames | Cumulative frame pairs since connect |
 | Uptime | Seconds since connect |
+
+## Calibration Target Boards
+
+The [boards/](boards/) folder contains the hardware design files for the heated checkerboard calibration target used by **Automatic Mode**. When powered, the board self-heats so the checkerboard pattern is visible to both the main camera and the Lepton thermal camera, allowing corner detection in both views.
+
+Two design variants are provided, each as an [Altium Designer](https://www.altium.com/altium-designer) project (schematics, PCB, libraries, and OutJob) zipped together, with matching fabrication gerbers:
+
+| Variant | Altium Project | Gerbers |
+|---------|----------------|---------|
+| **Thin-trace heater (recommended)** — checkerboard formed from 5.7 mil copper traces | [thermal-calibration-5p7mil-trace-r1.zip](boards/thermal-calibration-5p7mil-trace-r1.zip) | [thermal-calibration-5p7mil-trace-r1-gerbers.zip](boards/gerbers/thermal-calibration-5p7mil-trace-r1-gerbers.zip) |
+| Resistor heater — checkerboard heated by discrete resistors | [thermal-calibration-resistors-r1.zip](boards/thermal-calibration-resistors-r1.zip) | [thermal-calibration-resistors-r1-gerbers.zip](boards/gerbers/thermal-calibration-resistors-r1-gerbers.zip) |
+
+The **thin-trace heater is recommended**: the checkerboard squares are formed directly by copper traces, so the heat profile matches the visual pattern closely and produces sharper, more uniform thermal corners. It is the board pictured in the screenshots above and the one this tool was developed and tested against. The resistor variant heats the squares with discrete components and requires populating parts, making it more expensive to build and less crisp in the thermal view.
+
+Each gerber archive also includes the bill of materials (BOM) and a fabrication status report. Send the gerber zip to any PCB fabrication house to have a board manufactured.
