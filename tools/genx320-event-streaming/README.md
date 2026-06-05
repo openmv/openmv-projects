@@ -131,13 +131,21 @@ These files are excluded from git via `.gitignore`.
 
 ### Record Raw Events
 
-Continuous recording of the unprocessed sensor stream to a binary file. The button is **only enabled when connected in Raw stream mode** — in Processed mode the camera firmware has already decoded the events, so there is no raw stream to capture.
+Continuous recording of the unprocessed sensor stream to a file. The button is **only enabled when connected in Raw stream mode** — in Processed mode the camera firmware has already decoded the events, so there is no raw stream to capture.
 
 Click **Record Raw Events** to begin a recording. The button changes to **Stop Recording** and the file grows as events stream in (no buffering — every USB packet is flushed as it arrives). Click again to stop; the file is closed and the elapsed time / byte count is logged.
 
+The **Format** combo selects the output container (locked while a recording is in progress):
+
+| Format | Extension | Description |
+|---|---|---|
+| **Metavision RAW** *(default)* | `.raw` | ASCII header + EVT 2.0 stream. Opens directly in Prophesee's [metavision_viewer](https://github.com/prophesee-ai/openeb) and the rest of the OpenEB / Metavision SDK toolchain. Recommended unless you have a specific reason to skip the header. |
+| **Verbatim EVT 2.0** | `.bin` | Bit-for-bit copy of what the sensor emitted — no header, no metadata. Useful if you have your own decoder and want the smallest, most predictable file. |
+
 A recording is also closed automatically on Disconnect and on window close so the file is never left half-written.
 
-- `events_<timestamp>_raw.bin` — verbatim EVT 2.0 byte stream as emitted by the sensor (see **Raw Recording File Format** below).
+- `events_<timestamp>.raw` — Metavision RAW (see **Metavision RAW File Format** below).
+- `events_<timestamp>_raw.bin` — verbatim byte stream (see **Verbatim EVT 2.0 File Format** below).
 
 These files are excluded from git via `.gitignore`.
 
@@ -189,9 +197,29 @@ Both camera scripts produce the same event format on the PC side — a stream of
 
 **Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams unprocessed 32-bit EVT 2.0 words from the sensor (4 bytes/event vs 12 bytes/event in processed mode — 3× less data over USB). The PC decodes them vectorized using numpy with no Python loop. The decoded output is identical to processed mode.
 
-## Raw Recording File Format
+## Metavision RAW File Format
 
-`events_<timestamp>_raw.bin` is a verbatim dump of the sensor's EVT 2.0 stream. There is **no file header** — the file is simply a sequence of 32-bit little-endian words, exactly as the GenX320 emitted them. Word count = file size in bytes ÷ 4.
+`events_<timestamp>.raw` (selected when **Format = Metavision RAW**) is the Prophesee EVT 2.0 stream wrapped in the ASCII header expected by [Prophesee's metavision_viewer / OpenEB SDK](https://github.com/prophesee-ai/openeb). Open the file directly in `metavision_viewer` or load it with any OpenEB-compatible decoder.
+
+The file begins with this header (ASCII text, terminated by `% end\n`):
+
+```
+% date YYYY-MM-DD HH:MM:SS
+% camera_integrator_name OpenMV
+% plugin_integrator_name OpenMV
+% format EVT2;height=320;width=320
+% endianness little
+% geometry 320x320
+% end
+```
+
+Immediately after the `% end` line, the file body is the **same verbatim EVT 2.0 byte stream** described in the next section — no padding, no per-event prefix.
+
+## Verbatim EVT 2.0 File Format
+
+`events_<timestamp>_raw.bin` (selected when **Format = Verbatim EVT 2.0**) is a header-less dump of the sensor's EVT 2.0 stream — a sequence of 32-bit little-endian words, exactly as the GenX320 emitted them. Word count = file size in bytes ÷ 4.
+
+The same EVT 2.0 word layout applies to both the body of `events_<timestamp>.raw` (after the `% end\n` marker) and the entirety of `events_<timestamp>_raw.bin`.
 
 Each 32-bit word is one of:
 
@@ -234,6 +262,11 @@ time_high = (word & 0x0FFFFFFF) << 6   # units: microseconds
 
 ### Reference decoder
 
-The same vectorized numpy decoder used in the live stream can be applied to a recording — read the file as `<u4` and pass the buffer to `decode_raw_events()` in `genx320_event_mode_streaming_on_pc.py`. Output columns match the CSV format above (`type, sec, ms, us, x, y`).
+The same vectorized numpy decoder used in the live stream can be applied to either recording format:
+
+- **Verbatim** (`.bin`): read the entire file as bytes and pass to `decode_raw_events()` in `genx320_event_mode_streaming_on_pc.py`.
+- **Metavision RAW** (`.raw`): skip the ASCII header (read lines until and including the line that starts with `% end`), then pass the remaining bytes to the same decoder.
+
+Output columns match the CSV format above (`type, sec, ms, us, x, y`).
 
 **Processed mode** (`genx320_event_mode_streaming_on_cam.py`) has the camera firmware decode each event before transmission. The event buffer size, CSI FIFO depth, and (in processed mode) event FIFO depth are patched into the script at connect time from the GUI values.

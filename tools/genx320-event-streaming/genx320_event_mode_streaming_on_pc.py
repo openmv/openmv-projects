@@ -1211,6 +1211,7 @@ def main(args=None):
         _stop_recording()
         dpg.configure_item("record_btn", enabled=False,
                            label="Record Raw Events")
+        dpg.configure_item("record_format_combo", enabled=True)
         dpg.configure_item("connect_btn", label="Connect")
         _set_cam_settings_enabled(True)
 
@@ -1250,6 +1251,10 @@ def main(args=None):
     # ---- Camera settings callbacks (applied at connect time) ---------------
 
     STREAM_MODES = ['Raw (fastest)', 'Processed']
+
+    RECORD_FMT_METAVISION = 'Metavision RAW (.raw)'
+    RECORD_FMT_VERBATIM   = 'Verbatim EVT 2.0 (.bin)'
+    RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM]
 
     def cb_stream_mode(s, v, u=None):
         with state_lock:
@@ -1338,21 +1343,41 @@ def main(args=None):
         if recording:
             _stop_recording()
             dpg.configure_item("record_btn", label="Record Raw Events")
+            dpg.configure_item("record_format_combo", enabled=True)
             return
-        # Start a new recording — verbatim EVT 2.0 byte stream.
-        ts   = time.strftime("%Y%m%d_%H%M%S")
-        path = f"events_{ts}_raw.bin"
+        # Start a new recording. Format is selected via the combo:
+        #   Metavision RAW (.raw)   — ASCII header + EVT 2.0 stream, opens in
+        #                             Prophesee's metavision_viewer / OpenEB.
+        #   Verbatim EVT 2.0 (.bin) — header-less byte-for-byte sensor stream.
+        fmt          = dpg.get_value("record_format_combo")
+        is_metavision = fmt == RECORD_FMT_METAVISION
+        ts           = time.strftime("%Y%m%d_%H%M%S")
+        path         = f"events_{ts}.raw" if is_metavision else f"events_{ts}_raw.bin"
         try:
             f = open(path, "wb")
         except Exception as e:
             logging.error(f"Failed to open {path} for recording: {e}")
             return
+        if is_metavision:
+            date_str = time.strftime("%Y-%m-%d %H:%M:%S")
+            header = (
+                f"% date {date_str}\n"
+                f"% camera_integrator_name OpenMV\n"
+                f"% plugin_integrator_name OpenMV\n"
+                f"% format EVT2;height={SENSOR_H};width={SENSOR_W}\n"
+                f"% endianness little\n"
+                f"% geometry {SENSOR_W}x{SENSOR_H}\n"
+                f"% end\n"
+            )
+            f.write(header.encode('ascii'))
         with record_lock:
             record['file']  = f
             record['path']  = path
             record['bytes'] = 0
             record['start'] = time.perf_counter()
         dpg.configure_item("record_btn", label="Stop Recording")
+        # Lock format selection while a recording is in progress.
+        dpg.configure_item("record_format_combo", enabled=False)
         logging.info(f"Recording raw events to {path}")
 
     def cb_save(s=None, v=None, u=None):
@@ -1710,6 +1735,12 @@ def main(args=None):
                         dpg.add_separator()
                         dpg.add_button(label="Save Images and Events",
                                        tag="save_btn", callback=cb_save, width=-1)
+                        with dpg.group(horizontal=True):
+                            dpg.add_text("Format")
+                            dpg.add_combo(RECORD_FORMATS,
+                                          tag="record_format_combo",
+                                          default_value=RECORD_FMT_METAVISION,
+                                          width=-1)
                         dpg.add_button(label="Record Raw Events",
                                        tag="record_btn", callback=cb_record,
                                        width=-1, enabled=False)

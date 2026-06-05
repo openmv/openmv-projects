@@ -13,6 +13,7 @@ ccm_params_*.txt
 events_*.png
 events_*.csv
 events_*.bin
+events_*.raw
 
 # Thermal overlay calibration saved output files
 thermal_main_*.png
