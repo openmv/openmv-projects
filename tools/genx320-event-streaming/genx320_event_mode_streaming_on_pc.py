@@ -448,8 +448,32 @@ EMA_ALPHA = 0.2
 
 EVT_RES_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536]
 
+# Event stream formats (raw mode only). The GUI shows all four; EVT3.0 and AER
+# are decode-pending, so they appear greyed ("soon") and revert to the previous
+# selection if chosen. Codes match EVT_FORMAT in the on-camera script.
+EVT_FORMATS = [
+    # (combo label, format code, decoder implemented)
+    ("EVT2.0", "EVT20", True),
+    ("EVT2.1", "EVT21", True),
+    ("EVT3.0",       "EVT30", True),
+    ("AER (legacy)", "AER",   True),
+]
+EVT_FORMAT_LABELS = [f[0] for f in EVT_FORMATS]
+EVT_LABEL_TO_CODE = {f[0]: f[1] for f in EVT_FORMATS}
+EVT_CODE_TO_LABEL = {f[1]: f[0] for f in EVT_FORMATS}
+EVT_LABEL_READY   = {f[0]: f[2] for f in EVT_FORMATS}
+# Metavision RAW header fields per format code (used when recording). `fmt` is
+# the modern `% format` token; `evt` is the legacy `% evt` version string. AER is
+# absent — it has no Metavision RAW representation and records verbatim instead.
+EVT_METAVISION = {
+    "EVT20": {"fmt": "EVT2",  "evt": "2.0"},
+    "EVT21": {"fmt": "EVT21", "evt": "2.1"},
+    "EVT30": {"fmt": "EVT3",  "evt": "3.0"},
+}
 
-def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res, raw_mode=False):
+
+def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res, raw_mode=False,
+                 evt_format='EVT20'):
     """Patch the on-camera script with GUI-controlled parameters before exec.
 
     Substitutions made (processed mode):
@@ -460,7 +484,8 @@ def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res, raw_mode=False
 
     Substitutions made (raw mode):
       CSI_FIFO_DEPTH = <value>
-      EVT_RES        = <value>   — only the constant assignment
+      EVT_RES        = <value>     — only the constant assignment
+      EVT_FORMAT     = "<value>"   — sensor output event format
       def read / def readp
     """
     import re
@@ -471,6 +496,8 @@ def patch_script(script, csi_fifo_depth, evt_fifo_depth, evt_res, raw_mode=False
     if raw_mode:
         script = re.sub(r'EVT_RES\s*=\s*\d+',
                         f'EVT_RES = {evt_res}', script)
+        script = re.sub(r'EVT_FORMAT\s*=\s*["\']\w+["\']',
+                        f'EVT_FORMAT = "{evt_format}"', script)
     else:
         script = re.sub(r'EVENT_FIFO_DEPTH\s*=\s*\d+',
                         f'EVENT_FIFO_DEPTH = {evt_fifo_depth}', script)
@@ -568,6 +595,269 @@ def decode_raw_events(buf, time_high_ref):
     return np.stack([out_type, ts_s, ts_ms, ts_us, x, y], axis=1)
 
 
+def decode_raw_events_evt21(buf, time_high_ref):
+    """Vectorized EVT 2.1 decoder.
+
+    EVT 2.1 packs events into 64-bit little-endian word pairs. The high 32-bit
+    word has the same bit layout as an EVT 2.0 word (type/ts/x/y), and the low
+    32-bit word is a 32-bit `valid` bitmask. For CD events the x coordinate is
+    aligned on 32 and bit n of the mask marks a valid event at (x+n, y), so a
+    single pair expands to up to 32 pixel events.
+
+    Returns the same (N, 6) uint16 layout as decode_raw_events:
+      [type, ts_s, ts_ms, ts_us, x, y]
+
+    time_high_ref is a one-element list carrying the running EV_TIME_HIGH value
+    across consecutive calls (updated in-place).
+    """
+    words = np.frombuffer(buf, dtype=np.uint32)
+    n_words = words.shape[0] & ~1   # drop a trailing half-pair, if any
+    if n_words == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+    words = words[:n_words]
+    lo = words[0::2]                 # valid bitmask (CD) / unused (others)
+    hi = words[1::2]                 # type/ts/x/y — EVT 2.0 word layout
+    types = (hi >> 28) & 0xF
+
+    # --- EV_TIME_HIGH (0x8): update running timestamp accumulator ---
+    th_mask = types == 0x8
+    th_idx  = np.where(th_mask)[0]
+    th_vals = ((hi[th_mask] & 0x0FFFFFFF).astype(np.uint64)) << 6
+
+    # --- output events: CD pixel (0x0, 0x1) + EXT_TRIGGER (0xA) ---
+    evt_mask = (types <= 0x1) | (types == 0xA)
+    evt_idx  = np.where(evt_mask)[0]
+
+    if evt_idx.size == 0:
+        if th_vals.size > 0:
+            time_high_ref[0] = int(th_vals[-1])
+        return np.zeros((0, 6), dtype=np.uint16)
+
+    # --- assign the applicable time_high to every event (vectorized) ---
+    if th_idx.size > 0:
+        ins = np.searchsorted(th_idx, evt_idx, side='right') - 1
+        th_for_evt = np.empty(evt_idx.size, dtype=np.uint64)
+        before_first = ins < 0
+        th_for_evt[before_first]  = time_high_ref[0]
+        th_for_evt[~before_first] = th_vals[ins[~before_first]]
+        time_high_ref[0] = int(th_vals[-1])
+    else:
+        th_for_evt = np.full(evt_idx.size, time_high_ref[0], dtype=np.uint64)
+
+    evt_hi    = hi[evt_idx]
+    evt_types = types[evt_idx]
+    ts_low    = ((evt_hi >> 22) & 0x3F).astype(np.uint64)
+    t_us      = th_for_evt | ts_low
+
+    is_cd   = evt_types <= 0x1
+    is_trig = evt_types == 0xA
+
+    out_chunks = []
+
+    # --- CD events: expand the valid bitmask into individual pixel events ---
+    if is_cd.any():
+        cd_hi   = evt_hi[is_cd]
+        cd_pol  = evt_types[is_cd].astype(np.uint16)        # 0=off, 1=on
+        cd_xbase = ((cd_hi >> 11) & 0x7FF).astype(np.uint32)
+        cd_y     = (cd_hi & 0x7FF).astype(np.uint16)
+        cd_t     = t_us[is_cd]
+        cd_valid = lo[evt_idx][is_cd]                       # 32-bit mask per word
+
+        # (M, 32) bool: bit k set -> event at (xbase+k, y)
+        offsets = np.arange(32, dtype=np.uint32)
+        bits = ((cd_valid[:, None] >> offsets) & 1).astype(bool)
+        rows, cols = np.nonzero(bits)                       # row-major: parent order, then x
+
+        if rows.size:
+            ev_t  = cd_t[rows]
+            cd_out = np.empty((rows.size, 6), dtype=np.uint16)
+            cd_out[:, 0] = cd_pol[rows]
+            cd_out[:, 1] = (ev_t // 1_000_000).astype(np.uint16)
+            cd_out[:, 2] = ((ev_t // 1_000) % 1_000).astype(np.uint16)
+            cd_out[:, 3] = (ev_t % 1_000).astype(np.uint16)
+            cd_out[:, 4] = (cd_xbase[rows] + cols).astype(np.uint16)
+            cd_out[:, 5] = cd_y[rows]
+            out_chunks.append(cd_out)
+
+    # --- trigger events: remap type to EC_TRIGGER_EVENT(id, polarity) ---
+    # EC_TRIGGER_EVENT = EC_EXT_TRIGGER_FALLING(2) + ((id & 1) << 1) + polarity
+    if is_trig.any():
+        tw       = evt_hi[is_trig]
+        trig_t   = t_us[is_trig]
+        trig_id  = ((tw >> 8) & 0x1F).astype(np.uint16)
+        trig_pol = (tw & 0x1).astype(np.uint16)
+        trig_out = np.zeros((tw.size, 6), dtype=np.uint16)
+        trig_out[:, 0] = 2 + ((trig_id & 1) << 1) + trig_pol
+        trig_out[:, 1] = (trig_t // 1_000_000).astype(np.uint16)
+        trig_out[:, 2] = ((trig_t // 1_000) % 1_000).astype(np.uint16)
+        trig_out[:, 3] = (trig_t % 1_000).astype(np.uint16)
+        out_chunks.append(trig_out)
+
+    if not out_chunks:
+        return np.zeros((0, 6), dtype=np.uint16)
+    if len(out_chunks) == 1:
+        return out_chunks[0]
+    return np.concatenate(out_chunks, axis=0)
+
+
+@numba.njit(nogil=True, cache=True)
+def _decode_evt3_core(words, state, out):
+    """Sequential EVT 3.0 state-machine decode (compiled, nogil).
+
+    EVT 3.0 is a 16-bit compressed format: y, x, polarity, timestamp and type
+    are only re-sent when they change, so the decoder must carry state. `state`
+    is a 6-element int64 array preserved across calls:
+        [0] th        — current time_high, already shifted (<<12)
+        [1] tl        — current time_low (12 bits)
+        [2] y         — current y coordinate
+        [3] bx        — current vector base x
+        [4] bp        — current vector base polarity
+        [5] wrapbase  — accumulated 2^24 us offsets (time_high is only 24-bit)
+
+    `out` is a preallocated (M, 6) int32 buffer; the function writes
+    [type, ts_s, ts_ms, ts_us, x, y] rows and returns the number written.
+    """
+    th = state[0]; tl = state[1]; y = state[2]
+    bx = state[3]; bp = state[4]; wrapbase = state[5]
+    n = 0
+    for i in range(words.shape[0]):
+        w = words[i]
+        t = (w >> 12) & 0xF
+        p = w & 0xFFF
+        if t == 0x0:            # EVT_ADDR_Y
+            y = p & 0x7FF
+        elif t == 0x2:          # EVT_ADDR_X — single valid event
+            pol = (p >> 11) & 1
+            x   = p & 0x7FF
+            bx  = (x >> 5) << 5             # VECT_BASE_X.x = x & ~0x1F (align 32)
+            bp  = pol
+            t_us = wrapbase + th + tl
+            out[n, 0] = pol
+            out[n, 1] = t_us // 1_000_000
+            out[n, 2] = (t_us // 1_000) % 1_000
+            out[n, 3] = t_us % 1_000
+            out[n, 4] = x
+            out[n, 5] = y
+            n += 1
+        elif t == 0x3:          # VECT_BASE_X — sets base for following vectors
+            bp = (p >> 11) & 1
+            bx = p & 0x7FF
+        elif t == 0x4:          # VECT_12 — 12 validity bits from bx
+            t_us = wrapbase + th + tl
+            for k in range(12):
+                if (p >> k) & 1:
+                    out[n, 0] = bp
+                    out[n, 1] = t_us // 1_000_000
+                    out[n, 2] = (t_us // 1_000) % 1_000
+                    out[n, 3] = t_us % 1_000
+                    out[n, 4] = bx + k
+                    out[n, 5] = y
+                    n += 1
+            bx += 12
+        elif t == 0x5:          # VECT_8 — 8 validity bits from bx
+            valid = p & 0xFF
+            t_us = wrapbase + th + tl
+            for k in range(8):
+                if (valid >> k) & 1:
+                    out[n, 0] = bp
+                    out[n, 1] = t_us // 1_000_000
+                    out[n, 2] = (t_us // 1_000) % 1_000
+                    out[n, 3] = t_us % 1_000
+                    out[n, 4] = bx + k
+                    out[n, 5] = y
+                    n += 1
+            bx += 8
+        elif t == 0x6:          # EVT_TIME_LOW
+            tl = p & 0xFFF
+        elif t == 0x8:          # EVT_TIME_HIGH (24-bit timer; wraps ~every 16.7s)
+            new_th = (p & 0xFFF) << 12
+            if new_th < th:
+                wrapbase += (1 << 24)
+            th = new_th
+        elif t == 0xA:          # EXT_TRIGGER
+            tid = (p >> 8) & 0xF
+            val = p & 1
+            t_us = wrapbase + th + tl
+            out[n, 0] = 2 + ((tid & 1) << 1) + val
+            out[n, 1] = t_us // 1_000_000
+            out[n, 2] = (t_us // 1_000) % 1_000
+            out[n, 3] = t_us % 1_000
+            out[n, 4] = 0
+            out[n, 5] = 0
+            n += 1
+        # OTHERS (0xE) / CONTINUED (0x7, 0xF) carry no CD data — ignored.
+    state[0] = th; state[1] = tl; state[2] = y
+    state[3] = bx; state[4] = bp; state[5] = wrapbase
+    return n
+
+
+def decode_raw_events_evt3(buf, state):
+    """EVT 3.0 decoder. Returns the (N, 6) uint16 layout of decode_raw_events.
+
+    state is a 6-element int64 numpy array carrying the decoder's running state
+    across consecutive calls (see _decode_evt3_core).
+    """
+    words = np.frombuffer(buf, dtype=np.uint16)
+    if words.size == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+    # Exact upper bound on emitted events: ADDR_X / TRIGGER are 1 each, VECT_12
+    # up to 12, VECT_8 up to 8. Cheap to compute and keeps the buffer tight.
+    types = (words >> 12) & 0xF
+    n_max = int(np.count_nonzero((types == 0x2) | (types == 0xA))
+                + 12 * np.count_nonzero(types == 0x4)
+                + 8 * np.count_nonzero(types == 0x5))
+    out = np.empty((n_max, 6), dtype=np.int32)
+    n = _decode_evt3_core(words, state, out)   # updates state even when n == 0
+    if n == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+    return out[:n].astype(np.uint16)
+
+
+# Bytes per AER event in the capture buffer. AER encodes one CD event in 19
+# bits (pol[18] | x[17:9] | y[8:0]) packed into 3 little-endian bytes (the high
+# byte holds only bits 16..18, so it is always 0..7). Confirmed on hardware by
+# decoding a capture: at this stride the upper bits are zero and y stays within
+# 0..319; at 4 bytes the stream byte-misaligns and produces marching lines.
+#
+# The capture frame size (EVT_RES * 4 bytes, e.g. 32768) is not a multiple of 3,
+# so each frame carries a few padding bytes at the end. Frames do not straddle —
+# each channel read is one frame decoded from its start, dropping the remainder.
+AER_EVENT_BYTES = 3
+
+
+def decode_raw_events_aer(buf, state):
+    """Vectorized AER (legacy SNN) decoder.
+
+    AER carries CD events only — one event per word, no timestamps, no type or
+    trigger events. Each 19-bit value is (pol << 18) | (x << 9) | y, matching
+    the firmware's aer.h macros:
+        y   = val & 0x1FF          (bits 8..0)
+        x   = (val >> 9) & 0x1FF   (bits 17..9)
+        pol = (val >> 18) & 1      (bit 18; 0 = CD OFF, 1 = CD ON)
+
+    Returns the (N, 6) uint16 layout of decode_raw_events. Timestamp columns are
+    left at 0 — AER transmits no time, so frequency visualization is not
+    meaningful for this format (the event canvas still works).
+
+    `state` is accepted for dispatch uniformity but unused (AER is stateless).
+    """
+    stride = AER_EVENT_BYTES
+    n = len(buf) // stride
+    if n == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+    raw = np.frombuffer(buf, dtype=np.uint8, count=n * stride).reshape(n, stride)
+    word = raw[:, 0].astype(np.uint32)
+    for i in range(1, stride):
+        word |= raw[:, i].astype(np.uint32) << (8 * i)
+    val = word & 0x7FFFF                                 # 19 valid bits (pol|x|y)
+
+    out = np.zeros((n, 6), dtype=np.uint16)
+    out[:, 0] = ((val >> 18) & 0x1).astype(np.uint16)   # polarity (0=off, 1=on)
+    out[:, 4] = ((val >> 9) & 0x1FF).astype(np.uint16)  # x
+    out[:, 5] = (val & 0x1FF).astype(np.uint16)         # y
+    return out
+
+
 def _wait_for_script_stopped(camera, timeout, drain_stdout=False):
     """Wait for the camera-side script to actually report Script Stopped on the
     stdin channel. camera.stop() is fire-and-forget — it only sends STDIN_STOP
@@ -633,15 +923,35 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                 evt_fifo    = state['evt_fifo_depth']
                 evt_res     = state['evt_res']
                 raw_mode    = state['stream_mode'] == 'Raw (fastest)'
-            script = patch_script(script, csi_fifo, evt_fifo, evt_res, raw_mode)
+                evt_format  = state['evt_format']
+            script = patch_script(script, csi_fifo, evt_fifo, evt_res, raw_mode,
+                                  evt_format)
             logging.debug(f"Patched script: CSI_FIFO={csi_fifo} EVT_FIFO={evt_fifo} "
-                          f"EVT_RES={evt_res} raw={raw_mode} "
+                          f"EVT_RES={evt_res} raw={raw_mode} format={evt_format} "
                           f"readp={'yes' if sys.platform != 'win32' else 'no'}")
             camera.exec(script)
-            logging.info(f"Script running, streaming events ({'raw' if raw_mode else 'processed'})...")
+            logging.info(f"Script running, streaming events "
+                         f"({('raw ' + evt_format) if raw_mode else 'processed'})...")
 
             channel        = 'raw_events' if raw_mode else 'events'
-            time_high_ref  = [0]   # running EV_TIME_HIGH accumulator for raw decoding
+            # Raw word size, decoder, and carried decode state for the format.
+            # EVT2.0/2.1 carry only a running EV_TIME_HIGH ([0]); EVT3.0 carries
+            # a 6-element state machine array (see _decode_evt3_core).
+            if evt_format == 'EVT21':
+                raw_word_bytes, raw_decoder = 8, decode_raw_events_evt21
+                raw_state = [0]
+            elif evt_format == 'EVT30':
+                raw_word_bytes, raw_decoder = 2, decode_raw_events_evt3
+                raw_state = np.zeros(6, dtype=np.int64)
+            elif evt_format == 'AER':
+                raw_word_bytes, raw_decoder = AER_EVENT_BYTES, decode_raw_events_aer
+                raw_state = None
+            else:
+                raw_word_bytes, raw_decoder = 4, decode_raw_events
+                raw_state = [0]
+            # AER frames carry trailing padding (frame size isn't a multiple of
+            # 3), so a non-multiple length is expected — don't drop those frames.
+            raw_allow_remainder = evt_format == 'AER'
 
             start_time     = time.perf_counter()
             last_time      = start_time
@@ -679,8 +989,9 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                 data = camera.channel_read(channel, size)
 
                 if raw_mode:
-                    if (len(data) % 4) != 0:
-                        logging.warning(f"Misaligned raw packet: {len(data)} bytes (not multiple of 4)")
+                    if (len(data) % raw_word_bytes) != 0 and not raw_allow_remainder:
+                        logging.warning(f"Misaligned raw packet: {len(data)} bytes "
+                                        f"(not multiple of {raw_word_bytes})")
                         continue
                     # If recording is active, append the raw EVT 2.0 byte stream
                     # before decoding so the file is a verbatim copy of what the
@@ -701,7 +1012,7 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                                     except Exception:
                                         pass
                                     record['file'] = None
-                    events = decode_raw_events(data, time_high_ref)
+                    events = raw_decoder(data, raw_state)
                 else:
                     if (len(data) % 12) != 0:
                         logging.warning(f"Misaligned packet: {len(data)} bytes (not multiple of 12)")
@@ -936,6 +1247,9 @@ def parse_args():
                    help='Use raw event streaming (default: true)')
     p.add_argument('--evt-res',     type=int,   default=8192,
                    help='Event buffer resolution (default: 8192)')
+    p.add_argument('--evt-format',  default='EVT30',
+                   choices=[c for _, c, _ in EVT_FORMATS],
+                   help='Raw event stream format (default: EVT30)')
     return p.parse_args()
 
 
@@ -959,6 +1273,7 @@ def run_benchmark(args):
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
         'evt_res':        args.evt_res,
+        'evt_format':     args.evt_format,
         'contrast':       16,
         'color_mode':     'Grayscale',
         'mode':           'Sliding Window',
@@ -1068,6 +1383,7 @@ def main(args=None):
         'csi_fifo_depth': 8,
         'evt_fifo_depth': 8,
         'evt_res':        args.evt_res,
+        'evt_format':     args.evt_format,   # raw mode only: EVT20/EVT21/...
         # Visualization
         'contrast':   16,
         'color_mode': 'Grayscale',
@@ -1215,7 +1531,8 @@ def main(args=None):
         dpg.configure_item("connect_btn", label="Connect")
         _set_cam_settings_enabled(True)
 
-    CAM_SETTING_TAGS = ["stream_mode_combo", "csi_fifo_input", "evt_fifo_input"]
+    CAM_SETTING_TAGS = ["stream_mode_combo", "evt_format_combo",
+                        "csi_fifo_input", "evt_fifo_input"]
 
     def _set_cam_settings_enabled(enabled):
         for tag in CAM_SETTING_TAGS:
@@ -1253,15 +1570,31 @@ def main(args=None):
     STREAM_MODES = ['Raw (fastest)', 'Processed']
 
     RECORD_FMT_METAVISION = 'Metavision RAW (.raw)'
-    RECORD_FMT_VERBATIM   = 'Verbatim EVT 2.0 (.bin)'
+    RECORD_FMT_VERBATIM   = 'Verbatim (.bin)'
     RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM]
 
     def cb_stream_mode(s, v, u=None):
         with state_lock:
             state['stream_mode'] = v
         raw = v == 'Raw (fastest)'
-        # EVT FIFO only applies to the processed cam script
+        # EVT FIFO only applies to the processed cam script; the event format
+        # selector only applies to the raw cam script.
         (dpg.hide_item if raw else dpg.show_item)("evt_fifo_row")
+        (dpg.show_item if raw else dpg.hide_item)("evt_format_row")
+
+    def cb_evt_format(s, v, u=None):
+        # Any format flagged not-ready in EVT_FORMATS reverts to the previous
+        # selection (kept for future decode-pending formats). All current
+        # formats are decodable, so this guard is a no-op today.
+        if not EVT_LABEL_READY.get(v, False):
+            with state_lock:
+                prev = EVT_CODE_TO_LABEL[state['evt_format']]
+            dpg.set_value("evt_format_combo", prev)
+            logging.info(f"{v} decoding is not implemented yet — "
+                         f"keeping {prev}.")
+            return
+        with state_lock:
+            state['evt_format'] = EVT_LABEL_TO_CODE[v]
 
     def cb_csi_fifo(s, v, u=None):
         with state_lock:
@@ -1346,11 +1679,21 @@ def main(args=None):
             dpg.configure_item("record_format_combo", enabled=True)
             return
         # Start a new recording. Format is selected via the combo:
-        #   Metavision RAW (.raw)   — ASCII header + EVT 2.0 stream, opens in
-        #                             Prophesee's metavision_viewer / OpenEB.
-        #   Verbatim EVT 2.0 (.bin) — header-less byte-for-byte sensor stream.
+        #   Metavision RAW (.raw) — ASCII header + raw event stream, opens in
+        #                           Prophesee's metavision_viewer / OpenEB. The
+        #                           `% format` line tracks the selected format.
+        #   Verbatim (.bin)       — header-less byte-for-byte sensor stream.
         fmt          = dpg.get_value("record_format_combo")
         is_metavision = fmt == RECORD_FMT_METAVISION
+        with state_lock:
+            evt_format = state['evt_format']
+        mv = EVT_METAVISION.get(evt_format)
+        # AER is not a Metavision RAW format; fall back to a header-less verbatim
+        # dump rather than writing a file with a misleading header.
+        if is_metavision and mv is None:
+            logging.warning(f"{evt_format} has no Metavision RAW format — "
+                            f"recording a verbatim .bin instead.")
+            is_metavision = False
         ts           = time.strftime("%Y%m%d_%H%M%S")
         path         = f"events_{ts}.raw" if is_metavision else f"events_{ts}_raw.bin"
         try:
@@ -1359,14 +1702,19 @@ def main(args=None):
             logging.error(f"Failed to open {path} for recording: {e}")
             return
         if is_metavision:
+            # Metavision RAW header (ASCII, terminated by `% end`). The body that
+            # follows is the verbatim sensor stream. OpenEB / metavision_viewer
+            # decode it from `% format` (modern) or `% evt` (legacy); both are
+            # written for compatibility, along with the sensor geometry.
             date_str = time.strftime("%Y-%m-%d %H:%M:%S")
             header = (
-                f"% date {date_str}\n"
                 f"% camera_integrator_name OpenMV\n"
-                f"% plugin_integrator_name OpenMV\n"
-                f"% format EVT2;height={SENSOR_H};width={SENSOR_W}\n"
-                f"% endianness little\n"
+                f"% date {date_str}\n"
+                f"% evt {mv['evt']}\n"
+                f"% format {mv['fmt']};height={SENSOR_H};width={SENSOR_W}\n"
                 f"% geometry {SENSOR_W}x{SENSOR_H}\n"
+                f"% integrator_name OpenMV\n"
+                f"% plugin_integrator_name OpenMV\n"
                 f"% end\n"
             )
             f.write(header.encode('ascii'))
@@ -1579,6 +1927,15 @@ def main(args=None):
                                 default_value=state['stream_mode'],
                                 callback=cb_stream_mode, width=-1)
 
+                        with dpg.group(horizontal=True, tag="evt_format_row",
+                                       show=state['stream_mode'] == 'Raw (fastest)'):
+                            dpg.add_text("Format   ")
+                            dpg.add_combo(
+                                tag="evt_format_combo",
+                                items=EVT_FORMAT_LABELS,
+                                default_value=EVT_CODE_TO_LABEL[state['evt_format']],
+                                callback=cb_evt_format, width=-1)
+
                         with dpg.group(horizontal=True):
                             dpg.add_text("CSI FIFO ")
                             dpg.add_input_int(
@@ -1736,7 +2093,7 @@ def main(args=None):
                         dpg.add_button(label="Save Images and Events",
                                        tag="save_btn", callback=cb_save, width=-1)
                         with dpg.group(horizontal=True):
-                            dpg.add_text("Format")
+                            dpg.add_text("File  ")
                             dpg.add_combo(RECORD_FORMATS,
                                           tag="record_format_combo",
                                           default_value=RECORD_FMT_METAVISION,
@@ -1765,7 +2122,7 @@ def main(args=None):
 
 
     dpg.create_viewport(title="GenX320 Event Viewer",
-                        width=1280, height=800, resizable=True)
+                        width=1440, height=900, resizable=True)
     dpg.setup_dearpygui()
     dpg.show_viewport()
     dpg.set_primary_window("main_win", True)

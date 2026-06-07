@@ -39,6 +39,7 @@ The camera script is selected automatically based on the **Stream** mode chosen 
 |------|---------|-------------|
 | `--port PORT` | *(GUI selector)* | Serial port to connect on |
 | `--script PATH` | *(set by Stream mode)* | MicroPython script to run on the camera |
+| `--evt-format FMT` | `EVT30` | Raw event stream format: `EVT20`, `EVT21`, `EVT30`, or `AER` (all decoded on the PC) |
 | `--baudrate N` | `921600` | Serial baud rate |
 | `--crc` | off (Linux/Mac), on (Windows) | Enable CRC on the serial protocol |
 | `--seq` | on | Enable sequence numbers |
@@ -80,10 +81,27 @@ These patch the on-camera script before it is executed. They are locked while co
 
 | Control | Default | Description |
 |---------|---------|-------------|
-| Stream | Raw (fastest) | **Raw (fastest)** — streams unprocessed EVT 2.0 words, decoded on the PC; **Processed** — camera decodes events before sending |
+| Stream | Raw (fastest) | **Raw (fastest)** — streams unprocessed sensor words, decoded on the PC; **Processed** — camera decodes events before sending |
+| Format | EVT3.0 | Sensor output event format (Raw mode only): **EVT2.0**, **EVT2.1**, **EVT3.0** *(default — most compact / fastest over USB)*, **AER** — all decoded on the PC. See **Event Stream Formats** below. |
 | CSI FIFO | 8 | Depth of the hardware CSI receive buffer |
 | EVT FIFO | 8 | Depth of the software event FIFO (Processed mode only) |
 | EVT Buffer | 8192 | Event array size (must be a power of two, 1024–65536) |
+
+#### Event Stream Formats
+
+In Raw mode the **Format** combo selects the sensor's output event format. The
+on-camera script writes the format-selection registers before streaming
+(`EDF_CONTROL` at `0x7044` for the PSEE formats, `CPI_PIPELINE_CONTROL` at
+`0x8000` bit 4 for AER), and the PC decodes the stream accordingly.
+
+| Format | Word size | Status |
+|--------|-----------|--------|
+| **EVT2.0** *(default)* | 32-bit | Fully decoded on the PC. |
+| **EVT2.1** | 64-bit | Vectorized extension of EVT2.0 — fully decoded on the PC. |
+| **EVT3.0** | 16-bit | Compressed, stateful format — fully decoded on the PC (sequential numba-compiled decoder). |
+| **AER** | 19-bit (3 bytes) | Legacy SNN format — CD events only, **no timestamps** (so frequency visualization is unavailable; the event canvas still works). Decoded on the PC. |
+
+> **AER byte packing:** AER encodes one CD event in 19 bits (`pol[18] | x[17:9] | y[8:0]`) packed into **3 little-endian bytes** (`AER_EVENT_BYTES` in `genx320_event_mode_streaming_on_pc.py`). The capture frame size (`EVT_RES * 4` bytes) is not a multiple of 3, so each frame ends with a few padding bytes — frames are decoded individually from their start and the remainder is dropped (frames do not straddle). Decoding the stream at a 4-byte stride instead byte-misaligns 2 of every 3 events and produces spurious "marching line" artifacts.
 
 ### Event Visualization
 
@@ -135,17 +153,17 @@ Continuous recording of the unprocessed sensor stream to a file. The button is *
 
 Click **Record Raw Events** to begin a recording. The button changes to **Stop Recording** and the file grows as events stream in (no buffering — every USB packet is flushed as it arrives). Click again to stop; the file is closed and the elapsed time / byte count is logged.
 
-The **Format** combo selects the output container (locked while a recording is in progress):
+The **File** combo selects the output container (locked while a recording is in progress). The recorded stream is whatever the **Format** combo (above) is set to; the Metavision header's `% format` line tracks it automatically (`EVT2`, `EVT21`, …).
 
-| Format | Extension | Description |
+| File | Extension | Description |
 |---|---|---|
-| **Metavision RAW** *(default)* | `.raw` | ASCII header + EVT 2.0 stream. Opens directly in Prophesee's [metavision_viewer](https://github.com/prophesee-ai/openeb) and the rest of the OpenEB / Metavision SDK toolchain. Recommended unless you have a specific reason to skip the header. |
-| **Verbatim EVT 2.0** | `.bin` | Bit-for-bit copy of what the sensor emitted — no header, no metadata. Useful if you have your own decoder and want the smallest, most predictable file. |
+| **Metavision RAW** *(default)* | `.raw` | ASCII header + raw event stream. Opens directly in Prophesee's [metavision_viewer](https://github.com/prophesee-ai/openeb) and the rest of the OpenEB / Metavision SDK toolchain. Recommended unless you have a specific reason to skip the header. |
+| **Verbatim** | `.bin` | Bit-for-bit copy of what the sensor emitted — no header, no metadata. Useful if you have your own decoder and want the smallest, most predictable file. |
 
 A recording is also closed automatically on Disconnect and on window close so the file is never left half-written.
 
 - `events_<timestamp>.raw` — Metavision RAW (see **Metavision RAW File Format** below).
-- `events_<timestamp>_raw.bin` — verbatim byte stream (see **Verbatim EVT 2.0 File Format** below).
+- `events_<timestamp>_raw.bin` — verbatim byte stream (see **Verbatim File Format** below).
 
 These files are excluded from git via `.gitignore`.
 
@@ -195,77 +213,48 @@ Both camera scripts produce the same event format on the PC side — a stream of
 | 4 | Reset trigger — falling edge |
 | 5 | Reset trigger — rising edge |
 
-**Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams unprocessed 32-bit EVT 2.0 words from the sensor (4 bytes/event vs 12 bytes/event in processed mode — 3× less data over USB). The PC decodes them vectorized using numpy with no Python loop. The decoded output is identical to processed mode.
+**Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams the sensor's unprocessed words and decodes them on the PC, so far less data crosses USB than processed mode's 12 bytes/event. The **Format** combo selects the encoding (EVT3.0 by default — the most compact); see **Event Stream Formats** above for the per-format trade-offs and the **Verbatim File Format** section below for the byte layouts. The decoded output is identical regardless of format.
 
 ## Metavision RAW File Format
 
-`events_<timestamp>.raw` (selected when **Format = Metavision RAW**) is the Prophesee EVT 2.0 stream wrapped in the ASCII header expected by [Prophesee's metavision_viewer / OpenEB SDK](https://github.com/prophesee-ai/openeb). Open the file directly in `metavision_viewer` or load it with any OpenEB-compatible decoder.
+`events_<timestamp>.raw` (selected when **File = Metavision RAW**) is the Prophesee event stream wrapped in the ASCII header expected by [Prophesee's metavision_viewer / OpenEB SDK](https://github.com/prophesee-ai/openeb). Open the file directly in `metavision_viewer` or load it with any OpenEB-compatible decoder.
 
-The file begins with this header (ASCII text, terminated by `% end\n`):
+The file begins with this header (ASCII text, terminated by `% end\n`). The `% format` and `% evt` tokens track the selected event format (`EVT2`/`2.0`, `EVT21`/`2.1`, or `EVT3`/`3.0`):
 
 ```
-% date YYYY-MM-DD HH:MM:SS
 % camera_integrator_name OpenMV
-% plugin_integrator_name OpenMV
-% format EVT2;height=320;width=320
-% endianness little
+% date YYYY-MM-DD HH:MM:SS
+% evt 3.0
+% format EVT3;height=320;width=320
 % geometry 320x320
+% integrator_name OpenMV
+% plugin_integrator_name OpenMV
 % end
 ```
 
-Immediately after the `% end` line, the file body is the **same verbatim EVT 2.0 byte stream** described in the next section — no padding, no per-event prefix.
+Immediately after the `% end` line, the file body is the **same verbatim byte stream** described in the next section — no padding, no per-event prefix. (AER has no Metavision RAW representation, so it is always recorded as a verbatim `.bin`.)
 
-## Verbatim EVT 2.0 File Format
+## Verbatim File Format
 
-`events_<timestamp>_raw.bin` (selected when **Format = Verbatim EVT 2.0**) is a header-less dump of the sensor's EVT 2.0 stream — a sequence of 32-bit little-endian words, exactly as the GenX320 emitted them. Word count = file size in bytes ÷ 4.
+`events_<timestamp>_raw.bin` (selected when **File = Verbatim**) is a header-less dump of the sensor's stream, exactly as the GenX320 emitted it — the same bytes that follow the `% end` marker in a Metavision `.raw`. The word size and layout depend on the recorded **Format**:
 
-The same EVT 2.0 word layout applies to both the body of `events_<timestamp>.raw` (after the `% end\n` marker) and the entirety of `events_<timestamp>_raw.bin`.
+| Format | Word size | Layout |
+|--------|-----------|--------|
+| EVT2.0 | 4 bytes (32-bit LE) | `type = word>>28`. CD: `ts=(word>>22)&0x3F`, `x=(word>>11)&0x7FF`, `y=word&0x7FF`, polarity = type. `0x8` TIME_HIGH, `0xA` TRIGGER. |
+| EVT2.1 | 8 bytes (two 32-bit LE) | High word = an EVT2.0 word; low word = a 32-bit `valid` bitmask. CD events are vectorized — x is aligned to 32 and bit *n* flags an event at (x+n, y). |
+| EVT3.0 | 2 bytes (16-bit LE) | Compressed and stateful (`type = word>>12`: ADDR_Y / ADDR_X / VECT_BASE / VECT_12 / VECT_8 / TIME_LOW / TIME_HIGH / TRIGGER). Decoder keeps running y, x, polarity and time. |
+| AER | 3 bytes (19-bit LE) | CD only, no time. `val = b0 | b1<<8 | b2<<16`; `y=val&0x1FF`, `x=(val>>9)&0x1FF`, polarity=`(val>>18)&1`. Each capture frame is padded — decode per frame and drop the tail. |
 
-Each 32-bit word is one of:
+Full bit-level field definitions for every format are in the header comment of `genx320_raw_event_mode_streaming_on_cam.py`.
 
-| Bits [31:28] (type) | Meaning |
-|---|---|
-| `0x0` TD_LOW       | Pixel event — decrease in illumination (negative polarity) |
-| `0x1` TD_HIGH      | Pixel event — increase in illumination (positive polarity) |
-| `0x8` EV_TIME_HIGH | Upper 28 bits of the microsecond timestamp counter |
-| `0xA` EXT_TRIGGER  | External trigger event |
-| `0xE` OTHERS       | Reserved for future extension |
-| `0xF` CONTINUED    | Extra data appended to the previous event |
-
-### TD_LOW / TD_HIGH (pixel events, type 0x0 / 0x1)
-
-```
-Bits [27:22]  ts (6)   — timestamp low, microseconds (0–63 µs)
-Bits [21:11]  x (11)   — pixel column (0–319)
-Bits [10:0]   y (11)   — pixel row    (0–319)
-```
-
-Reconstruct the full microsecond timestamp by ORing the most recent `EV_TIME_HIGH` value with `ts`:
-
-```
-t_us = time_high | ts
-```
-
-### EV_TIME_HIGH (timestamp rollover, type 0x8)
-
-```
-Bits [27:0]  time_high (28) — upper bits of the timestamp counter
-```
-
-Update the running `time_high` accumulator on each occurrence:
-
-```
-time_high = (word & 0x0FFFFFFF) << 6   # units: microseconds
-```
-
-`EV_TIME_HIGH` is emitted by the sensor periodically and **must be tracked across the stream** — pixel events only carry the low 6 bits of the timestamp.
+Timestamps (EVT formats) are in microseconds: combine the running `time_high` with each event's low bits, then split as `s = t // 1_000_000`, `ms = (t // 1_000) % 1_000`, `us = t % 1_000`. AER carries no timestamps.
 
 ### Reference decoder
 
 The same vectorized numpy decoder used in the live stream can be applied to either recording format:
 
-- **Verbatim** (`.bin`): read the entire file as bytes and pass to `decode_raw_events()` in `genx320_event_mode_streaming_on_pc.py`.
-- **Metavision RAW** (`.raw`): skip the ASCII header (read lines until and including the line that starts with `% end`), then pass the remaining bytes to the same decoder.
+- **Verbatim** (`.bin`): read the entire file as bytes and pass to the matching decoder in `genx320_event_mode_streaming_on_pc.py` — `decode_raw_events()` (EVT 2.0), `decode_raw_events_evt21()` (EVT 2.1), `decode_raw_events_evt3()` (EVT 3.0), or `decode_raw_events_aer()` (AER). AER is recorded verbatim only (it has no Metavision RAW representation).
+- **Metavision RAW** (`.raw`): skip the ASCII header (read lines until and including the line that starts with `% end`), then pass the remaining bytes to the decoder matching the header's `% format` token.
 
 Output columns match the CSV format above (`type, sec, ms, us, x, y`).
 

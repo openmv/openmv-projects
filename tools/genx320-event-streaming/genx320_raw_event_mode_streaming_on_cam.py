@@ -9,72 +9,56 @@
 # from a PC using desktop tools. No visualization or text output is generated
 # by this script for OpenMV IDE.
 #
-# Raw EVT 2.0 format
-# ------------------
-# Each event is a 32-bit little-endian word. The firmware streams these words
-# directly from the sensor without any decoding.
+# Output event formats
+# =====================
+# This script only configures the sensor and streams its raw bytes to the PC;
+# all decoding happens PC-side (genx320_event_mode_streaming_on_pc.py). The
+# reference below describes the byte stream the PC receives for each EVT_FORMAT.
 #
-# Bit layout of each 32-bit word:
+# Conventions: `type` is the top 4 bits of a word. Polarity 0 = OFF (decrease in
+# light), 1 = ON (increase). x = pixel column, y = pixel row (both 0–319 on the
+# GenX320). Times are in microseconds; combine the running time_high with each
+# event's ts/time_low to get the full timestamp, then split it as:
+#   ts_s = t_us // 1_000_000;  ts_ms = (t_us // 1_000) % 1_000;  ts_us = t_us % 1_000
 #
-#   Bits [31:28]  type  (4 bits)  — event type:
-#       0x0  TD_LOW       Pixel event — decrease in illumination (negative polarity)
-#       0x1  TD_HIGH      Pixel event — increase in illumination (positive polarity)
-#       0x8  EV_TIME_HIGH Upper 28 bits of the microsecond timestamp counter
-#       0xA  EXT_TRIGGER  External trigger event
-#       0xE  OTHERS       Reserved for future extension
-#       0xF  CONTINUED    Extra data appended to the previous event
+# -------------------------------------------------------------------------
+# EVT2.0  —  32-bit little-endian words (4 bytes/event)
+# -------------------------------------------------------------------------
+#   type = word >> 28
+#     0x0/0x1  CD event   ts=(word>>22)&0x3F  x=(word>>11)&0x7FF  y=word&0x7FF
+#                         polarity = type;  t_us = time_high | ts
+#     0x8      TIME_HIGH  time_high = (word & 0x0FFFFFFF) << 6  (track across stream)
+#     0xA      TRIGGER    ts=(word>>22)&0x3F  id=(word>>8)&0x1F  value=word&1
 #
-# TD_LOW / TD_HIGH pixel event (type == 0x0 or 0x1):
-#   Bits [27:22]  ts   (6 bits)  — timestamp low, microseconds (0–63 µs)
-#   Bits [21:11]  x    (11 bits) — pixel column  (0–319 for GenX320)
-#   Bits [10:0]   y    (11 bits) — pixel row     (0–319 for GenX320)
+# -------------------------------------------------------------------------
+# EVT2.1  —  64-bit little-endian word pairs (8 bytes/event)
+# -------------------------------------------------------------------------
+#   Vectorized EVT2.0. The high 32-bit word is an EVT2.0 word (type/ts/x/y); the
+#   low 32-bit word is a 32-bit `valid` bitmask. For CD events x is aligned to
+#   32 and bit n flags an event at (x+n, y) — up to 32 events per pair.
+#   TIME_HIGH and TRIGGER use the high word exactly as in EVT2.0 (low word = 0).
 #
-#   Decoding:
-#       type = (word >> 28) & 0xF
-#       ts   = (word >> 22) & 0x3F
-#       x    = (word >> 11) & 0x7FF
-#       y    = (word      ) & 0x7FF
-#       t_us = time_high | ts          # full microsecond timestamp
-#       polarity = type                # 0 = negative, 1 = positive
+# -------------------------------------------------------------------------
+# EVT3.0  —  16-bit little-endian words (2 bytes/event)   [default]
+# -------------------------------------------------------------------------
+#   Compressed and stateful: y, x, polarity and time are re-sent only when they
+#   change, so the decoder keeps running state.  type = word >> 12
+#     0x0  ADDR_Y     y = word & 0x7FF
+#     0x2  ADDR_X     pol=(word>>11)&1  x=word&0x7FF       -> CD event at (x, y)
+#     0x3  VECT_BASE  pol=(word>>11)&1  base_x=word&0x7FF  (sets vector origin)
+#     0x4  VECT_12    12-bit mask vs base_x; bit i -> (base_x+i, y); base_x += 12
+#     0x5  VECT_8      8-bit mask vs base_x; bit i -> (base_x+i, y); base_x += 8
+#     0x6  TIME_LOW   time_low  = word & 0xFFF   (low 12 bits of 24-bit time)
+#     0x8  TIME_HIGH  time_high = word & 0xFFF   (high 12 bits; wraps ~16.7 s)
+#     0xA  TRIGGER    id=(word>>8)&0xF  value=word&1
 #
-# EV_TIME_HIGH (type == 0x8):
-#   Bits [27:0]  time_high (28 bits) — upper bits of timestamp counter
-#
-#   Decoding:
-#       time_high = (word & 0x0FFFFFFF) << 6   # units: microseconds
-#
-#   Must be tracked across the stream. Combine with ts from pixel events:
-#       t_us = time_high | ts
-#
-#   Split into seconds / milliseconds / microseconds:
-#       ts_s  = t_us // 1_000_000
-#       ts_ms = (t_us // 1_000) % 1_000
-#       ts_us = t_us % 1_000
-#
-# EXT_TRIGGER (type == 0xA):
-#   Bits [27:22]  ts         (6 bits)  — timestamp low, microseconds
-#   Bits [12:8]   trigger_id (5 bits)  — trigger channel ID
-#   Bit  [0]      polarity   (1 bit)   — 0 = falling, 1 = rising
-#
-#   Decoding:
-#       ts         = (word >> 22) & 0x3F
-#       trigger_id = (word >>  8) & 0x1F
-#       polarity   = (word      ) & 0x1
-#       t_us       = time_high | ts
-#
-# Parsing pseudocode (Python):
-#
-#   time_high = 0
-#   for word in struct.unpack_from('<' + 'I' * n, buf):
-#       event_type = (word >> 28) & 0xF
-#       if event_type == 0x8:                        # EV_TIME_HIGH
-#           time_high = (word & 0x0FFFFFFF) << 6
-#       elif event_type in (0x0, 0x1):               # TD pixel event
-#           ts   = (word >> 22) & 0x3F
-#           x    = (word >> 11) & 0x7FF
-#           y    = (word      ) & 0x7FF
-#           t_us = time_high | ts
-#           pol  = event_type                        # 0=neg, 1=pos
+# -------------------------------------------------------------------------
+# AER  —  19-bit value in 3 little-endian bytes (3 bytes/event)   [legacy]
+# -------------------------------------------------------------------------
+#   CD events only — no timestamps, no triggers.  val = b0 | b1<<8 | b2<<16
+#     y = val & 0x1FF   x = (val >> 9) & 0x1FF   polarity = (val >> 18) & 1
+#   Capture frames are padded (the frame size is not a multiple of 3), so decode
+#   each frame from its start and drop the few trailing bytes.
 
 import csi
 import protocol
@@ -86,10 +70,40 @@ CSI_FIFO_DEPTH = 8
 # Must be a power of two between 1024 and 65536.
 EVT_RES = 8192
 
+# Sensor output event format: "EVT20", "EVT21", "EVT30", or "AER" (see the
+# format reference at the top of this file). The PC GUI patches this value in
+# before exec; the default here matches the GUI default.
+EVT_FORMAT = "EVT30"
+
+# Registers that select the output event format. Prophesee registers are 32-bit,
+# but csi.__write_reg only writes the low 16 bits (bits >= 16 are unreliable from
+# MicroPython) — every field touched below lives in the low 16 bits, so it's safe.
+#
+#   EDF_CONTROL (0x7044) bits[1:0] — PSEE format: 0=EVT2.0, 1=EVT3.0, 2=EVT2.1
+#   CPI_PIPELINE_CONTROL (0x8000) bit 4 (0x10) — output data path: 0=PSEE, 1=AER
+_EDF_CONTROL = 0x7044
+_CPI_PIPELINE_CONTROL = 0x8000
+_EDF_FORMAT_BITS = {"EVT20": 0, "EVT30": 1, "EVT21": 2, "AER": 0}
+
 # Initialize the sensor.
 csi0 = csi.CSI(cid=csi.GENX320)
 csi0.reset()
 csi0.ioctl(csi.IOCTL_GENX320_SET_MODE, csi.GENX320_MODE_EVENT, EVT_RES)
+
+# Apply the requested output event format. SET_MODE configures the sensor for
+# legacy EVT2.0, so this runs after it to override the format. The PSEE event
+# format (EVT2.0/2.1/3.0) is selected via EDF_CONTROL; AER is a separate output
+# data path selected via CPI_PIPELINE_CONTROL bit 4.
+csi0.__write_reg(_EDF_CONTROL, _EDF_FORMAT_BITS[EVT_FORMAT])
+if EVT_FORMAT == "AER":
+    # AER is encoded from EVT2.0 inside the CPI module, so EDF stays EVT2.0 (0)
+    # and we just enable the AER output data path. Read-modify-write to keep the
+    # configured pipeline bits. The 16-bit write drops bit 16 (part of
+    # clk_timeout), but clock gating is disabled in this config so clk_timeout
+    # has no effect — the result is functionally identical.
+    cpi = csi0.__read_reg(_CPI_PIPELINE_CONTROL)
+    csi0.__write_reg(_CPI_PIPELINE_CONTROL, cpi | 0x10)
+
 csi0.framebuffers(CSI_FIFO_DEPTH)
 
 # Grab pointer to the internal FIFO buffer.
