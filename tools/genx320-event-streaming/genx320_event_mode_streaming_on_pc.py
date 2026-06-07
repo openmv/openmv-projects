@@ -1028,13 +1028,6 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                     # [0] polarity (0=neg, 1=pos)  [1] sec  [2] ms  [3] us  [4] x  [5] y
                     events = np.frombuffer(data, dtype='<u2').reshape(-1, 6)
 
-                # Decoded .npy recording: accumulate each batch (each `events`
-                # array is freshly allocated, so no copy is needed).
-                if record is not None:
-                    with record_lock:
-                        if record['events'] is not None:
-                            record['events'].append(events)
-
                 event_count = events.shape[0]
 
                 events_per_sec = event_count / dt
@@ -1539,12 +1532,9 @@ def main(args=None):
     reset_evt = threading.Event()       # render → processing: reset filter/canvas state
     conn     = {'cam_thread': None, 'proc_thread': None, 'stop_evt': None}
 
-    # Recording state (only used in raw stream mode). For .raw/.bin output,
-    # camera_worker writes the raw byte stream into record['file']. For decoded
-    # .npy output, record['events'] is a list and camera_worker appends each
-    # decoded (N, 6) batch to it; the array is written when recording stops.
-    record      = {'file': None, 'events': None, 'path': None,
-                   'bytes': 0, 'start': 0.0}
+    # Raw recording state (only used in raw stream mode). camera_worker writes
+    # the raw event byte stream verbatim into record['file'] when set.
+    record      = {'file': None, 'path': None, 'bytes': 0, 'start': 0.0}
     record_lock = threading.Lock()
 
     # -----------------------------------------------------------------------
@@ -1682,9 +1672,7 @@ def main(args=None):
 
     RECORD_FMT_METAVISION = 'Metavision RAW (.raw)'
     RECORD_FMT_VERBATIM   = 'Verbatim (.bin)'
-    RECORD_FMT_NPY        = 'Decoded NumPy (.npy)'
-    RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM,
-                             RECORD_FMT_NPY]
+    RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM]
 
     def cb_stream_mode(s, v, u=None):
         with state_lock:
@@ -1764,22 +1752,15 @@ def main(args=None):
         _sync_window_ui(v, mode)
 
     def _stop_recording():
-        """Finish the active recording, if any. Idempotent.
-
-        For .raw/.bin recordings this closes the file. For decoded .npy
-        recordings it concatenates the accumulated batches and writes the array.
-        """
+        """Close the active raw-events recording file, if any. Idempotent."""
         with record_lock:
             f       = record['file']
-            evlist  = record['events']
             path    = record['path']
             written = record['bytes']
-            active  = f is not None or evlist is not None
-            elapsed = time.perf_counter() - record['start'] if active else 0.0
-            record['file']   = None
-            record['events'] = None
-            record['path']   = None
-            record['bytes']  = 0
+            elapsed = time.perf_counter() - record['start'] if f else 0.0
+            record['file']  = None
+            record['path']  = None
+            record['bytes'] = 0
         if f is not None:
             try:
                 f.close()
@@ -1787,21 +1768,12 @@ def main(args=None):
                 pass
             logging.info(f"Recording stopped: {path} "
                          f"({written:,} bytes, {elapsed:.1f}s)")
-        elif evlist is not None:
-            arr = (np.concatenate(evlist, axis=0) if evlist
-                   else np.zeros((0, 6), dtype=np.uint16))
-            try:
-                np.save(path, arr)
-                logging.info(f"Recording stopped: {path} "
-                             f"({len(arr):,} events, {elapsed:.1f}s)")
-            except Exception as e:
-                logging.error(f"Failed to save {path}: {e}")
 
     def cb_record(s=None, v=None, u=None):
         # Toggle recording. Button only fires when enabled, which is only true
         # while connected in Raw stream mode.
         with record_lock:
-            recording = record['file'] is not None or record['events'] is not None
+            recording = record['file'] is not None
         if recording:
             _stop_recording()
             dpg.configure_item("record_btn", label="Record Raw Events")
@@ -1812,24 +1784,10 @@ def main(args=None):
         #                           Prophesee's metavision_viewer / OpenEB. The
         #                           `% format` line tracks the selected format.
         #   Verbatim (.bin)       — header-less byte-for-byte sensor stream.
-        #   Decoded NumPy (.npy)  — decoded (N, 6) event array, no camera needed
-        #                           to re-read (same layout as --decode --npy).
+        # (To get decoded events, use the Save button's NumPy/CSV option, or
+        #  decode a recording later with --decode.)
         fmt          = dpg.get_value("record_format_combo")
         ts           = time.strftime("%Y%m%d_%H%M%S")
-
-        # Decoded NumPy: accumulate decoded batches, write the array on stop.
-        if fmt == RECORD_FMT_NPY:
-            path = f"events_{ts}.npy"
-            with record_lock:
-                record['file']   = None
-                record['events'] = []
-                record['path']   = path
-                record['bytes']  = 0
-                record['start']  = time.perf_counter()
-            dpg.configure_item("record_btn", label="Stop Recording")
-            dpg.configure_item("record_format_combo", enabled=False)
-            logging.info(f"Recording decoded events to {path}")
-            return
 
         is_metavision = fmt == RECORD_FMT_METAVISION
         with state_lock:
@@ -1921,17 +1879,16 @@ def main(args=None):
         except Exception as e:
             logging.warning(f"Failed to save images: {e}")
 
-        # Save raw events as CSV
+        # Save events in both formats: CSV (human-readable) and NumPy .npy
+        # (compact, instant np.load). Same (N, 6) layout as --decode.
         batches = list(event_buf)
         if batches:
             all_events = np.concatenate(batches, axis=0)
-            csv_path   = f"{base}.csv"
-            np.savetxt(
-                csv_path, all_events,
-                delimiter=',', fmt='%d',
-                header='type,sec,ms,us,x,y', comments='',
-            )
-            logging.info(f"Saved {csv_path}  ({len(all_events):,} events)")
+            np.savetxt(f"{base}.csv", all_events, delimiter=',', fmt='%d',
+                       header='type,sec,ms,us,x,y', comments='')
+            np.save(f"{base}.npy", all_events)
+            logging.info(f"Saved {base}.csv and {base}.npy  "
+                         f"({len(all_events):,} events)")
 
     # ---- Frequency camera callbacks ----------------------------------------
 
@@ -2238,6 +2195,8 @@ def main(args=None):
                         dpg.add_separator()
                         dpg.add_button(label="Save Images and Events",
                                        tag="save_btn", callback=cb_save, width=-1)
+
+                        # ── Record ──────────────────────────────────────────
                         with dpg.group(horizontal=True):
                             dpg.add_text("File  ")
                             dpg.add_combo(RECORD_FORMATS,
