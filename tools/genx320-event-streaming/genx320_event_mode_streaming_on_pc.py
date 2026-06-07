@@ -993,17 +993,24 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                         logging.warning(f"Misaligned raw packet: {len(data)} bytes "
                                         f"(not multiple of {raw_word_bytes})")
                         continue
-                    # If recording is active, append the raw EVT 2.0 byte stream
-                    # before decoding so the file is a verbatim copy of what the
-                    # sensor emitted (no rewrite, no re-pack).
+                    # If recording is active, append the raw byte stream before
+                    # decoding. We trim each frame to a whole number of event
+                    # words: for EVT2.0/2.1/3.0 the frames are exact multiples so
+                    # this is a no-op, but AER frames carry a few padding bytes
+                    # (frame size isn't a multiple of 3). Dropping that padding
+                    # makes the recorded AER stream a clean, continuous sequence
+                    # of 3-byte events that decodes without needing the frame
+                    # size (see --decode).
                     if record is not None:
                         with record_lock:
                             rec_file = record['file']
                         if rec_file is not None:
+                            usable   = len(data) - (len(data) % raw_word_bytes)
+                            rec_bytes = data[:usable] if usable != len(data) else data
                             try:
-                                rec_file.write(data)
+                                rec_file.write(rec_bytes)
                                 with record_lock:
-                                    record['bytes'] += len(data)
+                                    record['bytes'] += len(rec_bytes)
                             except Exception as e:
                                 logging.error(f"Recording write failed: {e}")
                                 with record_lock:
@@ -1249,8 +1256,102 @@ def parse_args():
                    help='Event buffer resolution (default: 8192)')
     p.add_argument('--evt-format',  default='EVT30',
                    choices=[c for _, c, _ in EVT_FORMATS],
-                   help='Raw event stream format (default: EVT30)')
+                   help='Raw event stream format (default: EVT30). Also selects '
+                        'the decoder for --decode on header-less .bin files.')
+    p.add_argument('--decode',      default=None, metavar='FILE',
+                   help='Offline mode: decode a recorded raw file (.raw or .bin) '
+                        'to events and exit (no camera/GUI). Output is CSV by '
+                        'default; use --npy for a NumPy array.')
+    p.add_argument('--npy',         action='store_true',
+                   help='With --decode, write a .npy array instead of CSV.')
+    p.add_argument('--out',         default=None, metavar='FILE',
+                   help='With --decode, output path (default: input name with '
+                        '.csv/.npy extension).')
     return p.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Offline decode  (recorded raw file -> events, no camera/GUI)
+# ---------------------------------------------------------------------------
+
+# Per-format byte stride and decoder, plus a fresh carried-state factory.
+_DECODERS = {
+    'EVT20': (4, decode_raw_events,       lambda: [0]),
+    'EVT21': (8, decode_raw_events_evt21, lambda: [0]),
+    'EVT30': (2, decode_raw_events_evt3,  lambda: np.zeros(6, dtype=np.int64)),
+    'AER':   (AER_EVENT_BYTES, decode_raw_events_aer, lambda: None),
+}
+
+# Metavision header token (`% format` / `% evt`) -> internal format code.
+_MV_TOKEN_TO_CODE = {}
+for _code, _info in EVT_METAVISION.items():
+    _MV_TOKEN_TO_CODE[_info['fmt'].upper()] = _code            # EVT3   -> EVT30
+    _MV_TOKEN_TO_CODE['EVT' + _info['evt'].replace('.', '')] = _code  # 3.0 -> EVT30
+
+
+def _decode_buffer(evt_format, data):
+    """Decode a raw byte buffer to the (N, 6) uint16 event array.
+
+    Processed in word-aligned chunks so vector-format expansion (EVT2.1/3.0)
+    can't balloon peak memory on a whole-file decode; the decoders carry state
+    across chunks, so the result is identical to a single call.
+    """
+    stride, dec, make_state = _DECODERS[evt_format]
+    state = make_state()
+    n = len(data) - (len(data) % stride)
+    chunk = (1 << 18) * stride
+    parts = []
+    for off in range(0, n, chunk):
+        out = dec(data[off:min(off + chunk, n)], state)
+        if out.shape[0]:
+            parts.append(out)
+    if not parts:
+        return np.zeros((0, 6), dtype=np.uint16)
+    return parts[0] if len(parts) == 1 else np.concatenate(parts, axis=0)
+
+
+def run_decode(args):
+    """Decode a recorded raw file to CSV (default) or .npy, then exit."""
+    path = args.decode
+    try:
+        with open(path, 'rb') as f:
+            data = f.read()
+    except OSError as e:
+        sys.exit(f"Cannot read {path}: {e}")
+
+    evt_format = args.evt_format
+    # Metavision RAW files begin with an ASCII '% ...' header; skip it and read
+    # the format from it. Header-less .bin files fall back to --evt-format.
+    if data[:1] == b'%':
+        end = data.find(b'% end')
+        if end == -1:
+            sys.exit(f"{path}: looks like Metavision RAW but has no '% end' marker.")
+        nl   = data.find(b'\n', end)
+        head = data[:nl].decode('ascii', 'replace')
+        data = data[nl + 1:]
+        detected = None
+        for line in head.splitlines():
+            if line.startswith('% format'):
+                detected = _MV_TOKEN_TO_CODE.get(line.split()[2].split(';')[0].upper())
+            elif line.startswith('% evt') and detected is None:
+                detected = _MV_TOKEN_TO_CODE.get('EVT' + line.split()[2].replace('.', ''))
+        if detected:
+            evt_format = detected
+            logging.info(f"Detected {evt_format} from Metavision header")
+        else:
+            logging.warning(f"No format in header; using --evt-format {evt_format}")
+
+    events = _decode_buffer(evt_format, data)
+
+    out = args.out
+    if out is None:
+        out = os.path.splitext(path)[0] + ('.npy' if args.npy else '.csv')
+    if args.npy:
+        np.save(out, events)
+    else:
+        np.savetxt(out, events, fmt='%d', delimiter=',',
+                   header='type,sec,ms,us,x,y', comments='')
+    print(f"Decoded {len(events):,} events ({evt_format}) from {path} -> {out}")
 
 
 # ---------------------------------------------------------------------------
@@ -2283,7 +2384,11 @@ def main(args=None):
 
 if __name__ == '__main__':
     _args = parse_args()
-    if _args.benchmark:
+    if _args.decode:
+        logging.basicConfig(format="%(message)s",
+                            level=logging.DEBUG if _args.debug else logging.INFO)
+        run_decode(_args)
+    elif _args.benchmark:
         run_benchmark(_args)
     else:
         main(_args)

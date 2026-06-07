@@ -47,6 +47,9 @@ The camera script is selected automatically based on the **Stream** mode chosen 
 | `--quiet` | off | Suppress camera stdout |
 | `--debug` | off | Enable verbose logging |
 | `--benchmark` | off | Headless throughput benchmark (no GUI) |
+| `--decode FILE` | — | Decode a recorded `.raw`/`.bin` to events and exit (see [Decoding Recordings Offline](#decoding-recordings-offline)) |
+| `--npy` | off | With `--decode`, write a NumPy `.npy` array instead of CSV |
+| `--out FILE` | *(input name)* | With `--decode`, output path |
 
 ## Benchmark Mode
 
@@ -249,13 +252,19 @@ Full bit-level field definitions for every format are in the header comment of `
 
 Timestamps (EVT formats) are in microseconds: combine the running `time_high` with each event's low bits, then split as `s = t // 1_000_000`, `ms = (t // 1_000) % 1_000`, `us = t % 1_000`. AER carries no timestamps.
 
-### Reference decoder
+## Decoding Recordings Offline
 
-The same vectorized numpy decoder used in the live stream can be applied to either recording format:
+Decode a recorded raw file to events without a camera or GUI, using the same decoders as the live stream:
 
-- **Verbatim** (`.bin`): read the entire file as bytes and pass to the matching decoder in `genx320_event_mode_streaming_on_pc.py` — `decode_raw_events()` (EVT 2.0), `decode_raw_events_evt21()` (EVT 2.1), `decode_raw_events_evt3()` (EVT 3.0), or `decode_raw_events_aer()` (AER). AER is recorded verbatim only (it has no Metavision RAW representation).
-- **Metavision RAW** (`.raw`): skip the ASCII header (read lines until and including the line that starts with `% end`), then pass the remaining bytes to the decoder matching the header's `% format` token.
+```
+python genx320_event_mode_streaming_on_pc.py --decode events_20260607.raw
+python genx320_event_mode_streaming_on_pc.py --decode events_20260607_raw.bin --evt-format EVT30 --npy
+```
 
-Output columns match the CSV format above (`type, sec, ms, us, x, y`).
+- Output is **CSV by default** (`type,sec,ms,us,x,y`, the same columns the Save button writes). Add **`--npy`** to write a compact NumPy `.npy` array instead, or `--out PATH` to choose the filename.
+- **Metavision RAW** (`.raw`): the format is read automatically from the `% format` / `% evt` header.
+- **Verbatim** (`.bin`): pass the recorded format with **`--evt-format`** (the headerless `.bin` doesn't store it). AER recordings are always `.bin` (no Metavision representation) and decode cleanly — the padding bytes are dropped at record time, so no frame size is needed.
+
+To call the decoders directly from your own code, use `decode_raw_events()` (EVT 2.0), `decode_raw_events_evt21()` (EVT 2.1), `decode_raw_events_evt3()` (EVT 3.0), or `decode_raw_events_aer()` (AER) in `genx320_event_mode_streaming_on_pc.py`.
 
 **Processed mode** (`genx320_event_mode_streaming_on_cam.py`) has the camera firmware decode each event before transmission. The event buffer size, CSI FIFO depth, and (in processed mode) event FIFO depth are patched into the script at connect time from the GUI values.
