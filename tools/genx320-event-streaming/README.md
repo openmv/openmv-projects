@@ -243,7 +243,7 @@ Immediately after the `% end` line, the file body is the **same verbatim byte st
 | EVT2.0 | 4 bytes (32-bit LE) | `type = word>>28`. CD: `ts=(word>>22)&0x3F`, `x=(word>>11)&0x7FF`, `y=word&0x7FF`, polarity = type. `0x8` TIME_HIGH, `0xA` TRIGGER. |
 | EVT2.1 | 8 bytes (two 32-bit LE) | High word = an EVT2.0 word; low word = a 32-bit `valid` bitmask. CD events are vectorized — x is aligned to 32 and bit *n* flags an event at (x+n, y). |
 | EVT3.0 | 2 bytes (16-bit LE) | Compressed and stateful (`type = word>>12`: ADDR_Y / ADDR_X / VECT_BASE / VECT_12 / VECT_8 / TIME_LOW / TIME_HIGH / TRIGGER). Decoder keeps running y, x, polarity and time. |
-| AER | 3 bytes (19-bit LE) | CD only, no time. `val = b0 | b1<<8 | b2<<16`; `y=val&0x1FF`, `x=(val>>9)&0x1FF`, polarity=`(val>>18)&1`. Each capture frame is padded — decode per frame and drop the tail. |
+| AER | 3 bytes (19-bit LE) | CD only, no time. `val = b0 \| b1<<8 \| b2<<16`; `y=val&0x1FF`, `x=(val>>9)&0x1FF`, polarity=`(val>>18)&1`. Each capture frame is padded — decode per frame and drop the tail. |
 
 Full bit-level field definitions for every format are in the header comment of `genx320_raw_event_mode_streaming_on_cam.py`.
 
