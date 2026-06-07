@@ -14,6 +14,7 @@ events_*.png
 events_*.csv
 events_*.bin
 events_*.raw
+events_*.npy
 
 # Thermal overlay calibration saved output files
 thermal_main_*.png

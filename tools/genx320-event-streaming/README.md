@@ -154,19 +154,21 @@ These files are excluded from git via `.gitignore`.
 
 Continuous recording of the unprocessed sensor stream to a file. The button is **only enabled when connected in Raw stream mode** — in Processed mode the camera firmware has already decoded the events, so there is no raw stream to capture.
 
-Click **Record Raw Events** to begin a recording. The button changes to **Stop Recording** and the file grows as events stream in (no buffering — every USB packet is flushed as it arrives). Click again to stop; the file is closed and the elapsed time / byte count is logged.
+Click **Record Raw Events** to begin a recording. The button changes to **Stop Recording**. Click again to stop; the file is finalized and the elapsed time / size is logged.
 
-The **File** combo selects the output container (locked while a recording is in progress). The recorded stream is whatever the **Format** combo (above) is set to; the Metavision header's `% format` line tracks it automatically (`EVT2`, `EVT21`, …).
+The **File** combo selects the output (locked while a recording is in progress). For the raw outputs, the recorded stream is whatever the **Format** combo (above) is set to; the Metavision header's `% format` line tracks it automatically (`EVT2`, `EVT21`, …).
 
 | File | Extension | Description |
 |---|---|---|
-| **Metavision RAW** *(default)* | `.raw` | ASCII header + raw event stream. Opens directly in Prophesee's [metavision_viewer](https://github.com/prophesee-ai/openeb) and the rest of the OpenEB / Metavision SDK toolchain. Recommended unless you have a specific reason to skip the header. |
-| **Verbatim** | `.bin` | Bit-for-bit copy of what the sensor emitted — no header, no metadata. Useful if you have your own decoder and want the smallest, most predictable file. |
+| **Metavision RAW** *(default)* | `.raw` | ASCII header + raw event stream, flushed as it arrives. Opens directly in Prophesee's [metavision_viewer](https://github.com/prophesee-ai/openeb) and the rest of the OpenEB / Metavision SDK toolchain. |
+| **Verbatim** | `.bin` | Bit-for-bit copy of what the sensor emitted — no header, no metadata. Smallest, most predictable file; pair with the offline decoder below. |
+| **Decoded NumPy** | `.npy` | The decoded `(N, 6)` event array (`type, sec, ms, us, x, y`), written when you stop. Reload instantly with `np.load()` — no camera or re-decoding needed. (Events are buffered in memory during capture, so this is best for shorter recordings; use a raw output for very long captures.) |
 
-A recording is also closed automatically on Disconnect and on window close so the file is never left half-written.
+A recording is also finalized automatically on Disconnect and on window close so it is never left half-written.
 
 - `events_<timestamp>.raw` — Metavision RAW (see **Metavision RAW File Format** below).
 - `events_<timestamp>_raw.bin` — verbatim byte stream (see **Verbatim File Format** below).
+- `events_<timestamp>.npy` — decoded event array (same layout as the CSV from **Save** and from `--decode`).
 
 These files are excluded from git via `.gitignore`.
 

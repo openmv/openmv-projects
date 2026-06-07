@@ -1028,6 +1028,13 @@ def camera_worker(args, state_lock, state, event_q, stop_evt,
                     # [0] polarity (0=neg, 1=pos)  [1] sec  [2] ms  [3] us  [4] x  [5] y
                     events = np.frombuffer(data, dtype='<u2').reshape(-1, 6)
 
+                # Decoded .npy recording: accumulate each batch (each `events`
+                # array is freshly allocated, so no copy is needed).
+                if record is not None:
+                    with record_lock:
+                        if record['events'] is not None:
+                            record['events'].append(events)
+
                 event_count = events.shape[0]
 
                 events_per_sec = event_count / dt
@@ -1532,9 +1539,12 @@ def main(args=None):
     reset_evt = threading.Event()       # render → processing: reset filter/canvas state
     conn     = {'cam_thread': None, 'proc_thread': None, 'stop_evt': None}
 
-    # Raw recording state (only used in raw stream mode). camera_worker writes
-    # the EVT 2.0 byte stream verbatim into record['file'] when set.
-    record      = {'file': None, 'path': None, 'bytes': 0, 'start': 0.0}
+    # Recording state (only used in raw stream mode). For .raw/.bin output,
+    # camera_worker writes the raw byte stream into record['file']. For decoded
+    # .npy output, record['events'] is a list and camera_worker appends each
+    # decoded (N, 6) batch to it; the array is written when recording stops.
+    record      = {'file': None, 'events': None, 'path': None,
+                   'bytes': 0, 'start': 0.0}
     record_lock = threading.Lock()
 
     # -----------------------------------------------------------------------
@@ -1672,7 +1682,9 @@ def main(args=None):
 
     RECORD_FMT_METAVISION = 'Metavision RAW (.raw)'
     RECORD_FMT_VERBATIM   = 'Verbatim (.bin)'
-    RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM]
+    RECORD_FMT_NPY        = 'Decoded NumPy (.npy)'
+    RECORD_FORMATS        = [RECORD_FMT_METAVISION, RECORD_FMT_VERBATIM,
+                             RECORD_FMT_NPY]
 
     def cb_stream_mode(s, v, u=None):
         with state_lock:
@@ -1752,15 +1764,22 @@ def main(args=None):
         _sync_window_ui(v, mode)
 
     def _stop_recording():
-        """Close the active raw-events recording file, if any. Idempotent."""
+        """Finish the active recording, if any. Idempotent.
+
+        For .raw/.bin recordings this closes the file. For decoded .npy
+        recordings it concatenates the accumulated batches and writes the array.
+        """
         with record_lock:
             f       = record['file']
+            evlist  = record['events']
             path    = record['path']
             written = record['bytes']
-            elapsed = time.perf_counter() - record['start'] if f else 0.0
-            record['file']  = None
-            record['path']  = None
-            record['bytes'] = 0
+            active  = f is not None or evlist is not None
+            elapsed = time.perf_counter() - record['start'] if active else 0.0
+            record['file']   = None
+            record['events'] = None
+            record['path']   = None
+            record['bytes']  = 0
         if f is not None:
             try:
                 f.close()
@@ -1768,23 +1787,50 @@ def main(args=None):
                 pass
             logging.info(f"Recording stopped: {path} "
                          f"({written:,} bytes, {elapsed:.1f}s)")
+        elif evlist is not None:
+            arr = (np.concatenate(evlist, axis=0) if evlist
+                   else np.zeros((0, 6), dtype=np.uint16))
+            try:
+                np.save(path, arr)
+                logging.info(f"Recording stopped: {path} "
+                             f"({len(arr):,} events, {elapsed:.1f}s)")
+            except Exception as e:
+                logging.error(f"Failed to save {path}: {e}")
 
     def cb_record(s=None, v=None, u=None):
         # Toggle recording. Button only fires when enabled, which is only true
         # while connected in Raw stream mode.
         with record_lock:
-            recording = record['file'] is not None
+            recording = record['file'] is not None or record['events'] is not None
         if recording:
             _stop_recording()
             dpg.configure_item("record_btn", label="Record Raw Events")
             dpg.configure_item("record_format_combo", enabled=True)
             return
-        # Start a new recording. Format is selected via the combo:
+        # Start a new recording. Output is selected via the File combo:
         #   Metavision RAW (.raw) — ASCII header + raw event stream, opens in
         #                           Prophesee's metavision_viewer / OpenEB. The
         #                           `% format` line tracks the selected format.
         #   Verbatim (.bin)       — header-less byte-for-byte sensor stream.
+        #   Decoded NumPy (.npy)  — decoded (N, 6) event array, no camera needed
+        #                           to re-read (same layout as --decode --npy).
         fmt          = dpg.get_value("record_format_combo")
+        ts           = time.strftime("%Y%m%d_%H%M%S")
+
+        # Decoded NumPy: accumulate decoded batches, write the array on stop.
+        if fmt == RECORD_FMT_NPY:
+            path = f"events_{ts}.npy"
+            with record_lock:
+                record['file']   = None
+                record['events'] = []
+                record['path']   = path
+                record['bytes']  = 0
+                record['start']  = time.perf_counter()
+            dpg.configure_item("record_btn", label="Stop Recording")
+            dpg.configure_item("record_format_combo", enabled=False)
+            logging.info(f"Recording decoded events to {path}")
+            return
+
         is_metavision = fmt == RECORD_FMT_METAVISION
         with state_lock:
             evt_format = state['evt_format']
@@ -1795,7 +1841,6 @@ def main(args=None):
             logging.warning(f"{evt_format} has no Metavision RAW format — "
                             f"recording a verbatim .bin instead.")
             is_metavision = False
-        ts           = time.strftime("%Y%m%d_%H%M%S")
         path         = f"events_{ts}.raw" if is_metavision else f"events_{ts}_raw.bin"
         try:
             f = open(path, "wb")
