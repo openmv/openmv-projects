@@ -616,25 +616,33 @@ def decode_raw_events_evt21(buf, time_high_ref):
 
     # Determine the lo/hi phase. An EVT2.1 event is a 64-bit pair stored
     # little-endian as (lo = low/valid word, hi = type/ts/x/y header). Normally a
-    # frame starts on a pair boundary so hi = words[1::2], but the capture can
-    # begin one 32-bit word off (depending on where streaming latches onto the
-    # sensor's pair stream), which swaps lo/hi and turns the whole frame to
-    # garbage — most visibly when idle, where the stream is almost all TIME_HIGH
-    # pairs (hi = type 0x8, lo = 0) and the swap decodes the zero words as CD-OFF
-    # events while the real headers get read as valid bitmasks. TIME_HIGH words
-    # are headers emitted regularly even when nothing happens, so the phase that
-    # puts more of them on the header positions is the correct one. Detect and
-    # realign per frame.
-    top = words >> 28
-    th_phase0 = int(np.count_nonzero(top[1::2] == 0x8))   # hi = words[1::2]
-    th_phase1 = int(np.count_nonzero(top[2::2] == 0x8))   # hi = words[2::2]
-    w = words if th_phase0 >= th_phase1 else words[1:]
-    m = w.shape[0] & ~1             # drop a trailing half-pair, if any
-    if m == 0:
+    # frame starts on a pair boundary (hi = words[1::2]), but the capture can
+    # begin one 32-bit word off, swapping lo/hi and turning the frame to garbage
+    # — most visibly when idle, where the swap decodes TIME_HIGH pairs as CD
+    # events sprayed across the canvas.
+    #
+    # A TIME_HIGH pair is a header of type 0x8 whose low word is exactly 0 — a
+    # signature a CD valid-bitmask can't fake (masks are non-zero, and counting
+    # 0x8 nibbles alone mis-votes because busy masks often have bit 31 set, i.e.
+    # a 0x8.. top nibble). TIME_HIGH is emitted regularly even when idle, so the
+    # phase that lines those headers up with zero low words is the correct one.
+    n = words.shape[0]
+    mA = n & ~1
+    loA, hiA = words[0:mA:2], words[1:mA:2]
+    sigA = int(np.count_nonzero(((hiA >> 28) == 0x8) & (loA == 0)))
+    sigB = -1
+    loB = hiB = None
+    if n >= 3:
+        wB = words[1:]
+        mB = wB.shape[0] & ~1
+        loB, hiB = wB[0:mB:2], wB[1:mB:2]
+        sigB = int(np.count_nonzero(((hiB >> 28) == 0x8) & (loB == 0)))
+    if sigB > sigA:
+        lo, hi = loB, hiB           # frame started one 32-bit word late
+    else:
+        lo, hi = loA, hiA
+    if hi.shape[0] == 0:
         return np.zeros((0, 6), dtype=np.uint16)
-    w = w[:m]
-    lo = w[0::2]                     # valid bitmask (CD) / unused (others)
-    hi = w[1::2]                     # type/ts/x/y — EVT 2.0 word layout
     types = (hi >> 28) & 0xF
 
     # --- EV_TIME_HIGH (0x8): update running timestamp accumulator ---
