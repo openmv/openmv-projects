@@ -179,6 +179,7 @@ Live event throughput, updated at 5 Hz:
 | Events/batch | Raw event count in the most recent batch |
 | Rate | Exponential moving average event rate (events/sec) |
 | Bandwidth | EMA data rate (MB/s) |
+| Density | Events per MB (rate ÷ bandwidth) — encoding efficiency; higher for denser formats like EVT3.0. Raw MB/s is fixed-frame-bound, so this is where format differences show up. |
 | Total events | Cumulative event count since connect |
 | Uptime | Seconds since connect |
 

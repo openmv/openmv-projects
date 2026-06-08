@@ -1452,9 +1452,14 @@ def run_benchmark(args):
         if now - last_print >= 0.1:
             last_print = now
             s = result['stats']
+            # events/MB exposes the encoding density: a denser format (EVT3.0)
+            # carries more events per byte than EVT2.0, so this rises with the
+            # format efficiency even though raw MB/s is fixed-frame-bound.
+            density = s['event_rate'] / s['mbps'] if s['mbps'] > 0 else 0.0
             print(f"elapsed={s['elapsed']:.1f}s\t"
                   f"rate={s['event_rate']:,.0f} ev/s\t"
                   f"bw={s['mbps']:.2f} MB/s\t"
+                  f"density={density:,.0f} ev/MB\t"
                   f"total={s['total_events']:,}")
 
     stop_evt.set()
@@ -2226,6 +2231,7 @@ def main(args=None):
                                 ("Events/batch", "stat_ev_batch"),
                                 ("Rate",         "stat_rate"),
                                 ("Bandwidth",    "stat_bw"),
+                                ("Density",      "stat_density"),
                                 ("Total events", "stat_total"),
                                 ("Uptime",       "stat_uptime"),
                             ]:
@@ -2361,6 +2367,8 @@ def main(args=None):
                 dpg.set_value("stat_ev_batch", f"{s['event_count']:,}")
                 dpg.set_value("stat_rate",     f"{s['event_rate']:,.0f} ev/s")
                 dpg.set_value("stat_bw",       f"{s['mbps']:.2f} MB/s")
+                density = s['event_rate'] / s['mbps'] if s['mbps'] > 0 else 0.0
+                dpg.set_value("stat_density",  f"{density:,.0f} ev/MB")
                 dpg.set_value("stat_total",    f"{s['total_events']:,}")
                 dpg.set_value("stat_uptime",   f"{s['elapsed']:.1f} s")
 
