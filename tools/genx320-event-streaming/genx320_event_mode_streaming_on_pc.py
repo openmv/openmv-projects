@@ -1254,9 +1254,9 @@ def parse_args():
                    help='Use raw event streaming (default: true)')
     p.add_argument('--evt-res',     type=int,   default=8192,
                    help='Event buffer resolution (default: 8192)')
-    p.add_argument('--evt-format',  default='EVT30',
+    p.add_argument('--evt-format',  default='EVT21',
                    choices=[c for _, c, _ in EVT_FORMATS],
-                   help='Raw event stream format (default: EVT30). Also selects '
+                   help='Raw event stream format (default: EVT21). Also selects '
                         'the decoder for --decode on header-less .bin files.')
     p.add_argument('--decode',      default=None, metavar='FILE',
                    help='Offline mode: decode a recorded raw file (.raw or .bin) '
