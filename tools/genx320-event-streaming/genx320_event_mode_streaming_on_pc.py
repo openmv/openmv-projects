@@ -1458,6 +1458,14 @@ def run_benchmark(args):
                   f"total={s['total_events']:,}")
 
     stop_evt.set()
+    # Wait for the workers to tear down before returning. camera_worker stops the
+    # on-camera script and closes the serial port in its Camera context-exit; the
+    # threads are daemons, so without this join the process can exit and kill them
+    # mid-cleanup, leaving the camera running the old script and the port not
+    # released — which makes the next run fail to connect.
+    for t in (cam_t, proc_t):
+        if t.is_alive():
+            t.join(timeout=3.0)
     print("\nDone.")
 
 
