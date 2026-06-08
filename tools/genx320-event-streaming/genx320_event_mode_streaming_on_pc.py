@@ -611,12 +611,30 @@ def decode_raw_events_evt21(buf, time_high_ref):
     across consecutive calls (updated in-place).
     """
     words = np.frombuffer(buf, dtype=np.uint32)
-    n_words = words.shape[0] & ~1   # drop a trailing half-pair, if any
-    if n_words == 0:
+    if words.shape[0] < 2:
         return np.zeros((0, 6), dtype=np.uint16)
-    words = words[:n_words]
-    lo = words[0::2]                 # valid bitmask (CD) / unused (others)
-    hi = words[1::2]                 # type/ts/x/y — EVT 2.0 word layout
+
+    # Determine the lo/hi phase. An EVT2.1 event is a 64-bit pair stored
+    # little-endian as (lo = low/valid word, hi = type/ts/x/y header). Normally a
+    # frame starts on a pair boundary so hi = words[1::2], but the capture can
+    # begin one 32-bit word off (depending on where streaming latches onto the
+    # sensor's pair stream), which swaps lo/hi and turns the whole frame to
+    # garbage — most visibly when idle, where the stream is almost all TIME_HIGH
+    # pairs (hi = type 0x8, lo = 0) and the swap decodes the zero words as CD-OFF
+    # events while the real headers get read as valid bitmasks. TIME_HIGH words
+    # are headers emitted regularly even when nothing happens, so the phase that
+    # puts more of them on the header positions is the correct one. Detect and
+    # realign per frame.
+    top = words >> 28
+    th_phase0 = int(np.count_nonzero(top[1::2] == 0x8))   # hi = words[1::2]
+    th_phase1 = int(np.count_nonzero(top[2::2] == 0x8))   # hi = words[2::2]
+    w = words if th_phase0 >= th_phase1 else words[1:]
+    m = w.shape[0] & ~1             # drop a trailing half-pair, if any
+    if m == 0:
+        return np.zeros((0, 6), dtype=np.uint16)
+    w = w[:m]
+    lo = w[0::2]                     # valid bitmask (CD) / unused (others)
+    hi = w[1::2]                     # type/ts/x/y — EVT 2.0 word layout
     types = (hi >> 28) & 0xF
 
     # --- EV_TIME_HIGH (0x8): update running timestamp accumulator ---
