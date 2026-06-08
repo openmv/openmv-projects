@@ -39,7 +39,7 @@ The camera script is selected automatically based on the **Stream** mode chosen 
 |------|---------|-------------|
 | `--port PORT` | *(GUI selector)* | Serial port to connect on |
 | `--script PATH` | *(set by Stream mode)* | MicroPython script to run on the camera |
-| `--evt-format FMT` | `EVT21` | Raw event stream format: `EVT20`, `EVT21`, `EVT30`, or `AER` (all decoded on the PC) |
+| `--evt-format FMT` | `EVT20` | Raw event stream format: `EVT20`, `EVT21`, `EVT30`, or `AER` (all decoded on the PC) |
 | `--baudrate N` | `921600` | Serial baud rate |
 | `--crc` | off (Linux/Mac), on (Windows) | Enable CRC on the serial protocol |
 | `--seq` | on | Enable sequence numbers |
@@ -85,7 +85,7 @@ These patch the on-camera script before it is executed. They are locked while co
 | Control | Default | Description |
 |---------|---------|-------------|
 | Stream | Raw (fastest) | **Raw (fastest)** — streams unprocessed sensor words, decoded on the PC; **Processed** — camera decodes events before sending |
-| Format | EVT2.1 | Sensor output event format (Raw mode only): **EVT2.0**, **EVT2.1** *(default — Prophesee-recommended; the sensor's native vectorized format, fast/robust to decode)*, **EVT3.0**, **AER** — all decoded on the PC. See **Event Stream Formats** below. |
+| Format | EVT2.0 | Sensor output event format (Raw mode only): **EVT2.0** *(default — predictable 4 bytes/event, keeps timestamps, robust decode)*, **EVT2.1**, **EVT3.0**, **AER** — all decoded on the PC. The best choice is scene-dependent; see **Event Stream Formats** below. |
 | CSI FIFO | 8 | Depth of the hardware CSI receive buffer |
 | EVT FIFO | 8 | Depth of the software event FIFO (Processed mode only) |
 | EVT Buffer | 8192 | Event array size (must be a power of two, 1024–65536) |
@@ -97,10 +97,19 @@ on-camera script writes the format-selection registers before streaming
 (`EDF_CONTROL` at `0x7044` for the PSEE formats, `CPI_PIPELINE_CONTROL` at
 `0x8000` bit 4 for AER), and the PC decodes the stream accordingly.
 
+The camera streams fixed-size, fixed-rate frames, so the raw **MB/s is roughly
+constant regardless of format** — what the format changes is how many events fit
+in that byte budget. When the link is saturated (and the sensor is dropping
+events to fit, e.g. over USB on Windows), a more byte-dense encoding *for your
+scene* delivers more events through the same bandwidth. The densest format is
+scene-dependent: AER/EVT2.0 win on sparse/scattered activity; EVT2.1/EVT3.0 win
+on bursty activity where many adjacent pixels in a row fire together. Watch the
+**Density** (events/MB) stat to compare.
+
 | Format | Word size | Status |
 |--------|-----------|--------|
-| **EVT2.0** | 32-bit | Fully decoded on the PC. |
-| **EVT2.1** *(default)* | 64-bit | Vectorized extension of EVT2.0 and the sensor's native internal format; Prophesee-recommended. Fully decoded on the PC with vectorized NumPy (fast, no JIT warmup). Best for high-rate/bursty scenes; least byte-dense on sparse scenes (8 bytes per isolated event). |
+| **EVT2.0** *(default)* | 32-bit | Fixed 4 bytes/event, always carries timestamps, fully decoded on the PC with vectorized NumPy. Predictable and robust — a good general default, never far from the best across scenes. |
+| **EVT2.1** | 64-bit | Vectorized extension of EVT2.0 and the sensor's native internal format; Prophesee-recommended for high-rate work. Vectorized NumPy decode. Best for bursty/clustered scenes (many adjacent pixels per row); least byte-dense on sparse scenes (8 bytes per isolated event). |
 | **EVT3.0** | 16-bit | Compressed, stateful format — fully decoded on the PC (sequential numba-compiled decoder, with a brief first-batch JIT compile). Most byte-dense when activity clusters within rows. |
 | **AER** | 19-bit (3 bytes) | Legacy SNN format — CD events only, **no timestamps** (so frequency visualization is unavailable; the event canvas still works). Decoded on the PC. |
 
@@ -217,7 +226,7 @@ Both camera scripts produce the same event format on the PC side — a stream of
 | 4 | Reset trigger — falling edge |
 | 5 | Reset trigger — rising edge |
 
-**Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams the sensor's unprocessed words and decodes them on the PC, so far less data crosses USB than processed mode's 12 bytes/event. The **Format** combo selects the encoding (EVT2.1 by default — the sensor's native vectorized format, recommended by Prophesee); see **Event Stream Formats** above for the per-format trade-offs and the **Verbatim File Format** section below for the byte layouts. The decoded output is identical regardless of format.
+**Raw mode** (`genx320_raw_event_mode_streaming_on_cam.py`) streams the sensor's unprocessed words and decodes them on the PC, so far less data crosses USB than processed mode's 12 bytes/event. The **Format** combo selects the encoding (EVT2.0 by default — predictable and robust; the best choice is scene-dependent); see **Event Stream Formats** above for the per-format trade-offs and the **Verbatim File Format** section below for the byte layouts. The decoded output is identical regardless of format.
 
 ## Metavision RAW File Format
 

@@ -22,7 +22,7 @@
 #   ts_s = t_us // 1_000_000;  ts_ms = (t_us // 1_000) % 1_000;  ts_us = t_us % 1_000
 #
 # -------------------------------------------------------------------------
-# EVT2.0  —  32-bit little-endian words (4 bytes/event)
+# EVT2.0  —  32-bit little-endian words (4 bytes/event)   [default]
 # -------------------------------------------------------------------------
 #   type = word >> 28
 #     0x0/0x1  CD event   ts=(word>>22)&0x3F  x=(word>>11)&0x7FF  y=word&0x7FF
@@ -31,7 +31,7 @@
 #     0xA      TRIGGER    ts=(word>>22)&0x3F  id=(word>>8)&0x1F  value=word&1
 #
 # -------------------------------------------------------------------------
-# EVT2.1  —  64-bit little-endian word pairs (8 bytes/event)   [default]
+# EVT2.1  —  64-bit little-endian word pairs (8 bytes/event)
 # -------------------------------------------------------------------------
 #   Vectorized EVT2.0. The high 32-bit word is an EVT2.0 word (type/ts/x/y); the
 #   low 32-bit word is a 32-bit `valid` bitmask. For CD events x is aligned to
@@ -73,7 +73,7 @@ EVT_RES = 8192
 # Sensor output event format: "EVT20", "EVT21", "EVT30", or "AER" (see the
 # format reference at the top of this file). The PC GUI patches this value in
 # before exec; the default here matches the GUI default.
-EVT_FORMAT = "EVT21"
+EVT_FORMAT = "EVT20"
 
 # Registers that select the output event format. Prophesee registers are 32-bit,
 # but csi.__write_reg only writes the low 16 bits (bits >= 16 are unreliable from
